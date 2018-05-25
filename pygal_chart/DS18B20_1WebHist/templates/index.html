@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>DS18B20 Data Sensor</title>
+	<!-- <link rel="stylesheet" href='../static/style.css'/> -->
+	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	<style>
+		body {
+			text-align: center;
+		}
+
+		#g1,
+		#g2 {
+			width: 200px;
+			height: 160px;
+			display: inline-block;
+			margin: 1em;
+		}
+
+	</style>
+</head>
+
+<body>
+	<h1>DS18B20 Sensor Data </h1>
+	<div id="g1"></div>
+	<!-- <div id="g2"></div> -->
+	<hr>
+	<!-- <h3> Last Sensor Reading: {{ time }} {{ timezone }} ==> <a href="/"class="button">REFRESH</a></h3>	 -->
+	<h3> Last Sensor Reading:</h3><br> {{ time }} {{ timezone }} <a class="btn btn-primary btn-sm" href='/' role="button">REFRESH</a>
+	<hr>
+	<h3> HISTORICAL DATA </h3>
+	<!-- <p> Enter range of time to be retrieved (Sample Frequency: {{ freq }} minutes) -->
+	<!-- <form method="POST"> -->
+		<!-- <input name="rangeTime" value={{ rangeTime }}><br> -->
+		<!-- <div id="radio-container"> -->
+			<!-- <div> -->
+				<!-- <label for="minutes">Minutes</label> -->
+				<!-- <input id="minutes" type="radio" name="rangeUnit" value="1" checked> -->
+			<!-- </div> -->
+			<!-- <div> -->
+				<!-- <label for="hours">Hours</label> -->
+				<!-- <input id="hours" type="radio" name="rangeUnit" value="60"> -->
+			<!-- </div> -->
+			<!-- <div> -->
+				<!-- <label for="days">Days</label> -->
+				<!-- <input id="days" type="radio" name="rangeUnit" value="1440"> -->
+			<!-- </div> -->
+		<!-- </div> -->
+		<!-- <input type="submit"> -->
+	<!-- </form> -->
+	<form method="POST">
+		<div class="form-group">
+			<div class="col-sm-10">
+				<label for="rangeTime">Enter range of time to be retrieved (Sample Frequency: {{ freq }} minutes)</label>
+				<input type="text" id="rangeTime" value={{ rangeTime }}>
+			</div>
+		</div>
+		<fieldset class="form-group">
+			<div class="row">
+			  <div class="col-sm-10">
+				<div class="form-check">
+				  <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios1" value="option1" checked>
+				  <label class="form-check-label" for="gridRadios1">
+					First radio
+				  </label>
+				</div>
+				<div class="form-check">
+				  <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios2" value="option2">
+				  <label class="form-check-label" for="gridRadios2">
+					Second radio
+				  </label>
+				</div>
+				<div class="form-check disabled">
+				  <input class="form-check-input" type="radio" name="gridRadios" id="gridRadios3" value="option3" disabled>
+				  <label class="form-check-label" for="gridRadios3">
+					Third disabled radio
+				  </label>
+				</div>
+			  </div>
+			</div>
+		
+		</fieldset>
+
+		<div class="form-check">
+			<div class="col-sm">
+				<input class="form-check-input" type="radio" name="rangeUnit" id="minutes" value="1" checked>
+				<label for="minutes">Minutes</label>
+			</div>
+		</div>
+		<div class="form-check">
+			<input class="form-check-input" type="radio" name="rangeUnit" id="hours" value="60">
+			<label for="minutes">Hours</label>
+		</div>
+		<div class="form-check">
+			<input class="form-check-input" type="radio" name="rangeUnit" id="days" value="1440">
+			<label for="minutes">Days</label>
+		</div>
+	</form>
+	</p>
+	<hr>
+	<img src="/plot/temp" alt="Image Placeholder" width="99%">
+	<!-- <img src="/plot/hum" alt="Image Placeholder" width="49%"> -->
+	<!-- <img src="/test/custom_css_file" alt="Image Placeholder" width="99%"> -->
+	
+	<script type=text/javascript>
+		$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script>
+	
+	<!-- <script type=text/javascript src="../static/raphael-2.1.4.min.js"></script> -->
+	<!-- <script type=text/javascript src="../static/justgage.js"></script> -->
+	<script type=text/javascript src="{{
+		url_for('static', filename='raphael-2.1.4.min.js') }}"></script>
+	<script type=text/javascript src="{{
+		url_for('static', filename='justgage.js') }}"></script>
+	<script>
+		var g1, g2;
+		document.addEventListener("DOMContentLoaded", function(event) {
+			g1 = new JustGage({
+				id: "g1",
+				value: {{temp}},
+				valueFontColor: "black",
+				titleFontColor: "black",
+				min: 32,
+				max: 212,
+				title: "Temperature",
+				label: "Farenheit"
+			});
+
+			<!-- g2 = new JustGage({ -->
+				<!-- id: "g2", -->
+				<!-- value: {{hum}}, -->
+				<!-- valueFontColor: "yellow", -->
+				<!-- titleFontColor: "yellow", -->
+				<!-- min: 0, -->
+				<!-- max: 100, -->
+				<!-- title: "Humidity", -->
+				<!-- label: "%" -->
+			<!-- }); -->
+
+		});
+	</script>
+	<!-- <script type=text/javascript src="../static/jquery-2.2.3.min.js"></script> -->
+	<script type=text/javascript src="{{
+		url_for('static', filename='jquery-2.2.3.min.js') }}"></script>
+	<script>
+		<!-- $("#radio-container :radio").on("change", function(){ -->
+			<!-- alert("The radio with the ID '" + this.id + "' changed"); -->
+		<!-- }); -->
+
+		var radioValues = JSON.parse(localStorage.getItem('radioValues')) || {},
+			$radios = $("#radio-container :radio");
+
+		$radios.on("change", function(){
+			$radios.each(function(){
+				radioValues[this.id] = this.checked;
+		});
+
+			localStorage.setItem("radioValues", JSON.stringify(radioValues));
+		});
+
+		// On page load
+		$.each(radioValues, function(key, value) {
+			$("#" + key).prop('checked', value);
+		});
+	</script>
+</body>
+
+</html>

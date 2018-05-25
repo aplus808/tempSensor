@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	
+	<title>laserchicken.win</title>
+
+</head>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	
+	<title>DS18B20 Sensor Data</title>
+	<style>
+		#g1
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<h3>DS18B20 Sensor Data </h3>
+				<div id="g1"></div>
+			</div>
+			<div class="col">
+				<b>Last Sensor Reading:</b><br> {{ time }} {{ timezone }} 
+				<br><a class="btn btn-primary btn-sm" href='/' role="button">Refresh</a>
+				<br><b>Historical Data</b>
+				<br>Enter range of time to be retrieved (Sample Frequency: {{ freq }} minutes):
+				<form name="searchForm" id="searchForm" method="POST">
+					<div class="input-append">
+						<input class="span2" id="appendedInputButton" name="rangeTime" type="text" value={{ rangeTime }}>
+						<input class="span2" id="rangeUnit" name="rangeUnit" type="hidden">
+						<div class="btn-group">
+							<button class="btn dropdown-toggle" data-toggle="dropdown">
+							Time Unit
+							</button>
+							<ul class="dropdown-menu">
+							<li onclick="$('#rangeUnit').val('1'); $('#searchForm').submit()">Minutes</li>
+							<li onclick="$('#rangeUnit').val('60'); $('#searchForm').submit()">Hours</li>
+							<li onclick="$('#rangeUnit').val('1440'); $('#searchForm').submit()">Days</li>
+							</ul>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+		<hr>
+		
+		<div>
+			
+			<img src="/plot/temp" alt="Image Placeholder" width="85%">
+			
+			
+			<script type=text/javascript>
+				$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+			</script>
+
+			<script type=text/javascript src="{{
+				url_for('static', filename='js/jquery-3.3.1.slim.min.js') }}"></script>
+			<script type=text/javascript src="{{
+				url_for('static', filename='js/popper.min.js') }}"></script>
+			<script type=text/javascript src="{{
+				url_for('static', filename='js/raphael-2.1.4.min.js') }}"></script>
+			<script type=text/javascript src="{{
+				url_for('static', filename='js/justgage.js') }}"></script>
+			<script type=text/javascript src="{{
+				url_for('static', filename='js/bootstrap.min.js') }}"></script>
+			<script>
+				var g1;
+				document.addEventListener("DOMContentLoaded", function(event) {
+					g1 = new JustGage({
+						id: "g1",
+						value: {{temp}},
+						valueFontColor: "black",
+						titleFontColor: "black",
+						min: 32,
+						max: 212,
+						title: "Temperature",
+						label: "Farenheit"
+					});
+				});
+			</script>
+			
+		</div>
+	</div>
+</body>
+</html>
