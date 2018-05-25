@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<title>laserchicken.win</title>
+	
+	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+	<div class="container-fluid" style="min-height:100%">
+		
+		{% with messages = get_flashed_messages() %}
+			{% if messages %}
+				{% for message in messages %}
+					<div class="alert alert-warning alert-dismissible" role="alert">
+					<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+						{{ message }}
+					</div>
+				{% endfor %}
+			{% endif %}
+		{% endwith %}
+		
+		<div class="row">
+			<div class="col-10"></div>
+			<div class="col-1">
+				<a href="/logout" class="btn btn-default btn-sm" role="button" aria-disabled="true">
+					<span class="glyphicon glyphicon-log-out"></span> Logout
+				</a>
+			</div>
+		</div>
+
+		{% block body %} {% endblock%}			
+		<script type=text/javascript>
+			$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+		</script>
+
+		<script type=text/javascript src="{{
+			url_for('static', filename='js/jquery-3.3.1.slim.min.js') }}"></script>
+		<script type=text/javascript src="{{
+			url_for('static', filename='js/popper.min.js') }}"></script>
+		<script type=text/javascript src="{{
+			url_for('static', filename='js/raphael-2.1.4.min.js') }}"></script>
+		<script type=text/javascript src="{{
+			url_for('static', filename='js/justgage.js') }}"></script>
+		<script type=text/javascript src="{{
+			url_for('static', filename='js/bootstrap.min.js') }}"></script>
+	</div>
+</body>
+</html>
