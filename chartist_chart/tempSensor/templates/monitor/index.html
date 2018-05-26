@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block header %}
+	<h3>{% block title %}Monitor{% endblock %}</h3>
+	
+	<link href="{{ url_for('static', filename='css/chartist.min.css') }}" rel="stylesheet">
+	
+	<script type=text/javascript src="{{
+		url_for('static', filename='js/chartist.min.js') }}"></script>
+			
+{% endblock %}
+
+{% block content %}
+	{% if g.user %}
+		<!-- <p>Monitor data here</p> -->
+		<button id="update">Update</button>
+		<div class="ct-chart ct-perfect-fourth"></div>
+	{% endif %}
+	
+	<script>
+		
+		var myChart
+		
+		// jquery ajax call to the data route
+		var getData = $.get('/monitor/data');
+		getData.done(function(results) {
+			
+			var data = {
+				// A labels array that can contain any sort of values
+				labels: [results.dates],
+				// Our series array that contains series objects or in this case series data arrays
+				series: [results.tempfs]
+			};
+			
+			var options = {
+				width : 800,
+				height : 600,
+				low : 65
+			}
+			
+			// Create a new line chart object where as first parameter we pass in a selector
+			// that is resolving to our chart container element. The Second parameter
+			// is the actual data object.
+			<!-- new Chartist.Line('.ct-chart', data); -->
+			myChart = new Chartist.Line('.ct-chart', data, options);
+		
+		});
+		
+		function updateChart() {
+		
+			var updatedData = $.get('/monitor/data');
+			
+			updatedData.done(function(results) {
+				
+				var data = {
+					// A labels array that can contain any sort of values
+					//labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+					labels: [results.dates],
+					// Our series array that contains series objects or in this case series data arrays
+					series: [
+						results.tempfs
+					]
+				};
+				
+				myChart.update(data);
+				
+			});
+		
+		}
+		
+		$("#update").on('click', updateChart)
+
+	</script>
+	
+{% endblock %}

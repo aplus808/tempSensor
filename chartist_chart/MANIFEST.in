@@ -1,0 +1,4 @@
+include tempSensor/schema.sql
+graft tempSensor/static
+graft tempSensor/templates
+global-exclude *.pyc
