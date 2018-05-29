@@ -1,1 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<title>{% block title %}{% endblock %} - tempSensor</title>
+	
+	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	
+	<script type=text/javascript src="{{
+		url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+	<script type=text/javascript src="{{
+		url_for('static', filename='js/popper.min.js') }}"></script>
+	<script type=text/javascript src="{{
+		url_for('static', filename='js/bootstrap.min.js') }}"></script>
+</head>
+<nav>
+	<div class="container-fluid" style="min-height:100%">
+	<h3>tempSensor</h3>
+	<div class="row">
+			<div class="col-9"></div>
+			<div class="col-1">
+				{% if g.user %}
+					<span>{{ g.user['username'] }}</span>
+					<a href="{{ url_for('auth.logout') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-out"></span> Logout</a>
+				{% else %}
+					<a href="{{ url_for('auth.register') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-in"></span> Register</a>
+					<a href="{{ url_for('auth.login') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-in"></span> Login</a>
+				{% endif %}
 
+			</div>
+		</div>
+	</div>
+</nav>
+<section class="content">
+	<header>
+		{% block header %}{% endblock %}
+	</header>
+	{% with messages = get_flashed_messages() %}
+		{% if messages %}
+			{% for message in messages %}
+				<div class="alert alert-warning alert-dismissible" role="alert">
+				<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					{{ message }}
+				</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+	
+	{% block content %}{% endblock %}
+	
+</section>
