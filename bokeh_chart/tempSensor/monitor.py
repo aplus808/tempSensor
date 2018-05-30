@@ -51,7 +51,7 @@ def data():
 @login_required
 def index():
 	source = AjaxDataSource(data_url="/monitor/data", max_size=5000,
-							polling_interval=1000, mode='append')
+							polling_interval=30000, mode='append')
 
 	dates = []
 	tempfs = []

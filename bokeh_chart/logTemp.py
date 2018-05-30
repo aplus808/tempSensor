@@ -10,6 +10,8 @@ import time
 import sqlite3
 import os
 import subprocess
+import sys
+import getopt
 
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
@@ -18,7 +20,7 @@ base_dir = '/sys/bus/w1/devices/'
 device_folder = glob.glob(base_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
 dbname='instance/tempSensor.sqlite3'
-sampleFreq = 2 # time in seconds
+sampleFreq = 30 # time in seconds
 
 # get data from DS18B20 sensor
 def getDS18B20data():	
@@ -52,11 +54,33 @@ def logData (temp):
 	conn.close()
 
 # main function
-def main():
+# def main():
+	# while True:
+		# temp = read_temp()
+		# logData (temp)
+		# time.sleep(sampleFreq)
+
+def main(argv):
+	global sampleFreq
+	try:
+		opts, args = getopt.getopt(argv,"hf:",["freq="])
+	except getopt.GetoptError:
+		print('logTemp.py -f <freq>')
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt in ("-h", "--help"):
+			print('test.py -i <inputfile> -o <outputfile>')
+			sys.exit()
+		elif opt in ("-f", "--freq"):
+			sampleFreq = int(arg)
+	
+	print('Freq is ' + str(sampleFreq) + ' seconds')
 	while True:
 		temp = read_temp()
-		logData (temp)
+		logData(temp)
 		time.sleep(sampleFreq)
 
 # ------------ Execute program 
-main()
+if __name__ == "__main__":
+	# main()
+	main(sys.argv[1:])
