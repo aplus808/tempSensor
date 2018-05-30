@@ -13,14 +13,18 @@ import subprocess
 import sys
 import getopt
 
+from tempSensor.db import get_db
+
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
 base_dir = '/sys/bus/w1/devices/'
 device_folder = glob.glob(base_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
-dbname='instance/tempSensor.sqlite3'
+dbname='../instance/tempSensor.sqlite3'
 sampleFreq = 30 # time in seconds
+
+
 
 # get data from DS18B20 sensor
 def getDS18B20data():	
@@ -69,7 +73,7 @@ def main(argv):
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
-			print('test.py -i <inputfile> -o <outputfile>')
+			print('logTemp.py -i <inputfile> -o <outputfile>')
 			sys.exit()
 		elif opt in ("-f", "--freq"):
 			sampleFreq = int(arg)
