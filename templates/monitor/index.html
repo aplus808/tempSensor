@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block header %}
+	<h3>{% block title %}Monitor{% endblock %}</h3>
+	
+	<link href="{{ url_for('static', filename='css/bokeh-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/bokeh-widgets-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/bokeh-tables-0.12.16.min.css') }}" rel="stylesheet">
+	
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/bokeh-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/bokeh-widgets-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/bokeh-tables-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/bokeh-gl-0.12.16.min.js') }}"></script>
+	<script type="text/javascript">
+		Bokeh.set_log_level("info");
+	</script>
+			
+{% endblock %}
+
+{% block content %}
+	{% if g.user %}
+		<!-- <p>Monitor data here</p> -->
+		<!-- <button id="update">Update</button> -->
+		<!-- <div class="ct-chart ct-perfect-fourth"></div> -->
+		
+		<body>
+			{{ plot_div | safe }}
+			{{ plot_script | safe }}
+		</body>
+	{% endif %}
+	
+{% endblock %}

@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS temperatures;
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL
+);
+
+CREATE TABLE temperatures (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp DATETIME,
+  tempc NUMERIC,
+  tempf NUMERIC
+);
