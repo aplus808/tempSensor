@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	
-	<title>{% block title %}{% endblock %} - tempSensor</title>
+	<title>{% block title %}{% endblock %} - temp_sensor</title>
 	
 	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
@@ -15,12 +15,15 @@
 		url_for('static', filename='js/popper.min.js') }}"></script>
 	<script type=text/javascript src="{{
 		url_for('static', filename='js/bootstrap.min.js') }}"></script>
+	{% block headscripts %}{% endblock %}
 </head>
 <nav>
 	<div class="container-fluid" style="min-height:100%">
-	<h3>tempSensor</h3>
+	<h3>laserchicken.win</h3>
 	<div class="row">
-			<div class="col-9"></div>
+			<div class="col-9">
+				{% block navcol %}{% endblock %}
+			</div>
 			<div class="col-1">
 				{% if g.user %}
 					<span>{{ g.user['username'] }}</span>

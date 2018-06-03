@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-#  logTemp.py
+#  log_temp.py
 #
 #  Capture data from a DS18B20 sensor and save it on a database
 
@@ -10,23 +10,37 @@ import time
 import sqlite3
 import os
 import subprocess
-import sys
-import getopt
+import click
+import signal
 
-from tempSensor.db import get_db
 
+# from temp_sensor.db import get_db
+
+# Initialize sensor
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
-base_dir = '/sys/bus/w1/devices/'
-device_folder = glob.glob(base_dir + '28*')[0]
+received = False
+
+# Set sensor variables
+device_dir = '/sys/bus/w1/devices/'
+device_folder = glob.glob(device_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
-dbname='../instance/tempSensor.sqlite3'
-sampleFreq = 30 # time in seconds
 
+# Flask instance path from current working directory
+instancepath = os.getcwd() + '/instance/'
 
+# Set db variables
+dbname = instancepath + 'temp_sensor.sqlite3'
+sfreq = 30 # time in seconds
 
-# get data from DS18B20 sensor
+# Record the pid
+pidfile = instancepath + 'log_temp_pid.txt'
+fh = open(pidfile, 'w')
+fh.write(str(os.getpid()))
+fh.close()
+
+# Get data from DS18B20 sensor
 def getDS18B20data():	
 	catdata = subprocess.Popen(['cat',device_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	out,err = catdata.communicate()
@@ -34,7 +48,7 @@ def getDS18B20data():
 	lines = out_decode.split('\n')
 	return lines
 
-# read data into Celcius and Farenheit
+# Read data into Celcius and Farenheit
 def read_temp():
 	lines = getDS18B20data()
 	while lines[0].strip()[-3:] != 'YES':
@@ -47,7 +61,7 @@ def read_temp():
 		temp_f = temp_c * 9.0 / 5.0 + 32.0
 		return temp_c, temp_f
 
-# log sensor data on database
+# Log sensor data on database
 def logData (temp):
 	
 	conn=sqlite3.connect(dbname)
@@ -57,34 +71,34 @@ def logData (temp):
 	conn.commit()
 	conn.close()
 
-# main function
-# def main():
-	# while True:
-		# temp = read_temp()
-		# logData (temp)
-		# time.sleep(sampleFreq)
+def handUSR1(signum,frame):
+	# Callback invoked whan a USR1 signal is received
+	global received
+	# print("SIGUSR1 received")
+	received = True
 
-def main(argv):
-	global sampleFreq
-	try:
-		opts, args = getopt.getopt(argv,"hf:",["freq="])
-	except getopt.GetoptError:
-		print('logTemp.py -f <freq>')
-		sys.exit(2)
-	for opt, arg in opts:
-		if opt in ("-h", "--help"):
-			print('logTemp.py -i <inputfile> -o <outputfile>')
-			sys.exit()
-		elif opt in ("-f", "--freq"):
-			sampleFreq = int(arg)
+@click.command()
+@click.option('--freq', default=30, help="Sample frequency in seconds")
+def main(freq):
+	global sfreq
+	global received
 	
-	print('Freq is ' + str(sampleFreq) + ' seconds')
-	while True:
-		temp = read_temp()
-		logData(temp)
-		time.sleep(sampleFreq)
+	if freq is not None and freq > 0:
+		sfreq = freq
+	print("Sample frequency is " + str(sfreq) + " seconds")
+	
+	i = 1
+	# Waitait for a kill signal
+	while received == False:
+		signal.signal(signal.SIGUSR1, handUSR1)
+		time.sleep(1)
+		# Logog and read data at the sampling frequency
+		if i%sfreq == 0:
+			temp = read_temp()
+			logData(temp)
+		i += 1
 
+		
 # ------------ Execute program 
 if __name__ == "__main__":
-	# main()
-	main(sys.argv[1:])
+	main()

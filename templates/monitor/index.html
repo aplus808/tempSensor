@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 
-{% block header %}
-	<h3>{% block title %}Monitor{% endblock %}</h3>
-	
+{% block headscripts %}
 	<link href="{{ url_for('static', filename='css/bokeh-0.12.16.min.css') }}" rel="stylesheet">
 	<link href="{{ url_for('static', filename='css/bokeh-widgets-0.12.16.min.css') }}" rel="stylesheet">
 	<link href="{{ url_for('static', filename='css/bokeh-tables-0.12.16.min.css') }}" rel="stylesheet">
-	
+
 	<script type="text/javascript" src="{{
 		url_for('static', filename='js/bokeh-0.12.16.min.js') }}"></script>
 	<script type="text/javascript" src="{{
@@ -18,19 +16,116 @@
 	<script type="text/javascript">
 		Bokeh.set_log_level("info");
 	</script>
-			
+	
+	<script type="text/javascript">
+		jQuery(function ($) {
+			$(document).on('change', 'input:radio[id^="i_opt_"]', function (event) {
+				alert($(this)[0].value);
+				$.ajax({
+					// The URL for the request
+					url: "/monitor/test",
+					// The data to send (will be converted to a query string)
+					data: {
+						range: $(this)[0].value
+					},
+					// Whether this is a POST or GET request
+					type: "GET",
+					// The type of data we expect back
+					//dataType: "json",
+				})
+				// Callback function
+				//.done(function(json) {
+					
+				//})
+				// Code to run if the request fails; the raw request and
+				// status codes are passed to the function
+				.fail(function( xhr, status, errorThrown ) {
+					alert( "Sorry, there was a problem!" );
+					console.log( "Error: " + errorThrown );
+					console.log( "Status: " + status );
+					console.dir( xhr );
+				})
+				// Code to run regardless of success or failure;
+				.always(function( xhr, status ) {
+					//alert( "The request is complete!" );
+				});
+			});
+		});
+	</script>
+
+	
+	{{ plot_script | safe }}
+{% endblock %}
+
+{% block header %}
+<div class="container" align="center">
+	<h3>{% block title %}Temp Sensor Monitor{% endblock %}</h3>
+</div>
+{% endblock %}
+
+{% block navcol %}
+	{% if g.user %}
+		<div class="container">
+			<div class="row">
+				<div class="col">
+					<p><b>BAWK BAWK</b></p>
+				</div>
+			</div>
+		</div>
+	{% endif %}
 {% endblock %}
 
 {% block content %}
 	{% if g.user %}
-		<!-- <p>Monitor data here</p> -->
-		<!-- <button id="update">Update</button> -->
-		<!-- <div class="ct-chart ct-perfect-fourth"></div> -->
-		
-		<body>
-			{{ plot_div | safe }}
-			{{ plot_script | safe }}
-		</body>
+	<body>
+		<div class="container-fluid" style="min-height:100%">
+			<div class="row">
+				<div class="col-1">
+				</div>
+				<div class="col">
+					<form class="form-inline" method="post">
+						<label class="mb-2 mr-sm-2" for="pollfreq">Polling Frequency (seconds)</label>
+						<input class="form-control mb-2 mr-sm-2" name="pollfreq" id="pollfreq" value={{ pollfreq }}>
+						<button type="submit" class="btn btn-primary mb-2" value="Login">Submit</button>
+					</form>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-1">
+				</div>
+				<div class="col">
+					<div id="tr_opt" class="btn-group btn-group-toggle" data-toggle="buttons">
+						<label class="btn btn-secondary" id="l_opt_1">
+							<input type="radio" name="options" id="i_opt_1" value="60" autocomplete="off"> 1m
+						</label>
+						<label class="btn btn-secondary" id="l_opt_2">
+							<input type="radio" name="options" id="i_opt_2" value="600" autocomplete="off"> 10m
+						</label>
+						<label class="btn btn-secondary" id="l_opt_3">
+							<input type="radio" name="options" id="i_opt_3" value="1800" autocomplete="off"> 30m
+						</label>
+						<label class="btn btn-secondary active" id="l_opt_4">
+							<input type="radio" name="options" id="i_opt_4" value="3600" autocomplete="off" checked=""> 1h
+						</label>
+						<label class="btn btn-secondary" id="l_opt_5">
+							<input type="radio" name="options" id="i_opt_5" value="43200" autocomplete="off"> 12h
+						</label>
+						<label class="btn btn-secondary" id="l_opt_6">
+							<input type="radio" name="options" id="i_opt_6" value="86400" autocomplete="off"> 1d
+						</label>
+						<label class="btn btn-secondary" id="l_opt_7">
+							<input type="radio" name="options" id="i_opt_7" value="604800" autocomplete="off"> 7d
+						</label>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-11">
+					{{ plot_div | safe }}
+				</div>
+			</div>
+		</div>
+	</body>
 	{% endif %}
 	
 {% endblock %}

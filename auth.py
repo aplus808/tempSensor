@@ -5,7 +5,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from tempSensor.db import get_db
+from temp_sensor.db import get_db
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -82,6 +82,8 @@ def login():
 			return redirect(url_for('monitor.index'))
 
 		flash(error)
+	elif g.user is not None:
+		return redirect(url_for('monitor.index'))
 
 	return render_template('auth/login.html')
 
