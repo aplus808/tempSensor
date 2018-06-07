@@ -1,3 +1,5 @@
+
+
 import functools
 
 from flask import (
@@ -5,7 +7,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from tempSensor.db import get_db
+from temp_sensor.db import get_db
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -78,10 +80,13 @@ def login():
 		if error is None:
 			session.clear()
 			session['user_id'] = user['id']
+			session.permanent = True
 			flash(username + ", login successful")
 			return redirect(url_for('monitor.index'))
 
 		flash(error)
+	elif g.user is not None:
+		return redirect(url_for('monitor.index'))
 
 	return render_template('auth/login.html')
 
