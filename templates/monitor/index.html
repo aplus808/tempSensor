@@ -13,48 +13,63 @@
 		url_for('static', filename='js/bokeh-tables-0.12.16.min.js') }}"></script>
 	<script type="text/javascript" src="{{
 		url_for('static', filename='js/bokeh-gl-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/moment-with-locales.min.js') }}"></script>
 	<script type="text/javascript">
 		Bokeh.set_log_level("info");
 	</script>
+
+	<div id="p_s_div">
+		{{ plot_script | safe }}
+	</div>
 	
-	<script type="text/javascript">
-		jQuery(function ($) {
-			$(document).on('change', 'input:radio[id^="i_opt_"]', function (event) {
-				alert($(this)[0].value);
+	<script>
+		$(document).ready(function(){
+			console.log("pollfreq:" + {{ pollfreq }})
+			var interval = {{ pollfreq }} * 1000;
+			setInterval(function() {
+				var dat = {current : true};
 				$.ajax({
-					// The URL for the request
-					url: "/monitor/test",
-					// The data to send (will be converted to a query string)
-					data: {
-						range: $(this)[0].value
-					},
-					// Whether this is a POST or GET request
-					type: "GET",
-					// The type of data we expect back
-					//dataType: "json",
-				})
-				// Callback function
-				//.done(function(json) {
-					
-				//})
-				// Code to run if the request fails; the raw request and
-				// status codes are passed to the function
-				.fail(function( xhr, status, errorThrown ) {
-					alert( "Sorry, there was a problem!" );
-					console.log( "Error: " + errorThrown );
-					console.log( "Status: " + status );
-					console.dir( xhr );
-				})
-				// Code to run regardless of success or failure;
-				.always(function( xhr, status ) {
-					//alert( "The request is complete!" );
+					url: "/monitor/data",
+					method: 'POST',
+					data: dat,
+					dataType: 'json',
+					success: function(result) {
+						var date = moment(result.x, "YYYY-MM-DD HH:mm:ss");
+						var temp = result.y;
+						temp = parseFloat(Math.round(temp * 100) / 100).toFixed(2);
+						$("#curr").attr({"class" : "col-3 bg-primary text-white"});
+						$("#currtext").text("Last temp (F): ");
+						$("#currtemp").html(temp);
+						$("#currdate").html(date.format("ddd, MMM D, h:mm:ss a"));
+					}	
 				});
-			});
+			}, interval);  // Interval = 5000ms
+
+			$(document).on('change', 'input:radio[id^="r_opt_"]', function (event) {
+				//alert("I am about to POST this:\n\n" + dat.range);
+				//var range = $(this);
+				var range = $(this);
+				var contents = range.parent().contents();
+				var rangetxt = contents.slice(contents.index(range) + 1, contents.index(range) + 2);
+				//console.log("rangetxt: " + rangetxt.text());
+				$.post(
+					$('#form_range').attr("action"),
+					{'range' : range.val()},
+					function(data, status) {
+						//alert("Status: " + status + "\nData: " + data);
+						$('#p_s_div').html(data.plotscript);
+						$('#p_d_div').html(data.plotdiv);
+						$('#r_div').attr({"class" : "row justify-content-center text-primary"});
+						$('#r_div').html("Range changed to " + rangetxt.text());
+						//$('#s1').text(data.plotscript);
+					},
+					'json',
+				)
+			})
 		});
 	</script>
-
 	
-	{{ plot_script | safe }}
 {% endblock %}
 
 {% block header %}
@@ -83,48 +98,64 @@
 				<div class="col-1">
 				</div>
 				<div class="col">
-					<form class="form-inline" method="post">
+					<!-- <form class="form-inline" method="post">
 						<label class="mb-2 mr-sm-2" for="pollfreq">Polling Frequency (seconds)</label>
 						<input class="form-control mb-2 mr-sm-2" name="pollfreq" id="pollfreq" value={{ pollfreq }}>
 						<button type="submit" class="btn btn-primary mb-2" value="Login">Submit</button>
-					</form>
+					</form> -->
+					
 				</div>
 			</div>
-			<div class="row">
+
+			<div class="row justify-content-center">
 				<div class="col-1">
 				</div>
-				<div class="col">
-					<div id="tr_opt" class="btn-group btn-group-toggle" data-toggle="buttons">
-						<label class="btn btn-secondary" id="l_opt_1">
-							<input type="radio" name="options" id="i_opt_1" value="60" autocomplete="off"> 1m
-						</label>
-						<label class="btn btn-secondary" id="l_opt_2">
-							<input type="radio" name="options" id="i_opt_2" value="600" autocomplete="off"> 10m
-						</label>
-						<label class="btn btn-secondary" id="l_opt_3">
-							<input type="radio" name="options" id="i_opt_3" value="1800" autocomplete="off"> 30m
-						</label>
-						<label class="btn btn-secondary active" id="l_opt_4">
-							<input type="radio" name="options" id="i_opt_4" value="3600" autocomplete="off" checked=""> 1h
-						</label>
-						<label class="btn btn-secondary" id="l_opt_5">
-							<input type="radio" name="options" id="i_opt_5" value="43200" autocomplete="off"> 12h
-						</label>
-						<label class="btn btn-secondary" id="l_opt_6">
-							<input type="radio" name="options" id="i_opt_6" value="86400" autocomplete="off"> 1d
-						</label>
-						<label class="btn btn-secondary" id="l_opt_7">
-							<input type="radio" name="options" id="i_opt_7" value="604800" autocomplete="off"> 7d
-						</label>
-					</div>
+				<div class="col-3 bg-primary text-white">
+					Poll freq (s): {{ pollfreq }}
+				</div>
+				<div class="col-3" id="curr">
+					<span id="currtext"></span>
+					<span id="currtemp"></span><br>
+					<span id="currdate"></span>
+				</div>
+				<div class="col-1">
 				</div>
 			</div>
+			
 			<div class="row">
-				<div class="col-11">
+				<div class="col-11" id="p_d_div">
 					{{ plot_div | safe }}
 				</div>
 			</div>
+			<br><br>
+			<div class="row justify-content-center" id="r_div"></div>
+			<br>
+			<div class="row justify-content-center">
+				
+				<!-- <form action="javascript:alert( 'Bawk!' );" method="post" id="form_range"> -->
+				<form action="{{ url_for('monitor.index') }}" method="post" id="form_range">
+				
+				<div id="tr_opt" class="btn-group btn-group-toggle" data-toggle="buttons">
+					<label class="btn btn-info active" id="l_opt_1">
+						<input type="radio" name="options" id="r_opt_1" value="600" autocomplete="off" checked=""> 10m
+					</label>
+					<label class="btn btn-info" id="l_opt_2">
+						<input type="radio" name="options" id="r_opt_2" value="1800" autocomplete="off"> 30m
+					</label>
+					<label class="btn btn-info" id="l_opt_3">
+						<input type="radio" name="options" id="r_opt_3" value="3600" autocomplete="off"> 1h
+					</label>
+					<label class="btn btn-info" id="l_opt_4">
+						<input type="radio" name="options" id="r_opt_4" value="86400" autocomplete="off"> 1d
+					</label>
+					<label class="btn btn-info" id="l_opt_5">
+						<input type="radio" name="options" id="r_opt_5" value="604800" autocomplete="off"> 7d
+					</label>
+				</div>
+				</form><br>
+			</div>
 		</div>
+	<span id="s1"></span>	
 	</body>
 	{% endif %}
 	

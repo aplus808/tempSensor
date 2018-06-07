@@ -1,3 +1,5 @@
+
+
 import functools
 
 from flask import (
@@ -78,6 +80,7 @@ def login():
 		if error is None:
 			session.clear()
 			session['user_id'] = user['id']
+			session.permanent = True
 			flash(username + ", login successful")
 			return redirect(url_for('monitor.index'))
 

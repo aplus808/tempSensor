@@ -1,37 +1,40 @@
+
 import os
 
-from flask import Flask
+from datetime import timedelta
+from flask import Flask, session
 
 
 def create_app(test_config=None):
-	# create and configure the app
+	# Create and configure the app
 	app = Flask(__name__, instance_relative_config=True)
 	app.config.from_mapping(
-		SECRET_KEY='dev',
-		DATABASE=os.path.join(app.instance_path, 'temp_sensor.sqlite3'),
-		PIDFILE=os.path.join(app.instance_path, 'log_temp_pid.txt'),
-		LOGTEMP=os.path.join(app.root_path, 'log_temp.py'),
+		SECRET_KEY = 'dev',
+		DATABASE = os.path.join(app.instance_path, 'temp_sensor.sqlite3'),
+		PIDFILE = os.path.join(app.instance_path, 'log_temp_pid.txt'),
+		LOGTEMP = os.path.join(app.root_path, 'log_temp.py'),
+		PERMANENT_SESSION_LIFETIME = timedelta(minutes = 20)
 	)
 
 	if test_config is None:
-		# load the instance config, if it exists, when not testing
+		# Load the instance config, if it exists, when not testing
 		app.config.from_pyfile('config.py', silent=True)
 	else:
-		# load the test config if passed in
+		# Load the test config if passed in
 		app.config.from_mapping(test_config)
 
-	# ensure the instance folder exists
+	# Ensure the instance folder exists
 	try:
 		os.makedirs(app.instance_path)
 	except OSError:
 		pass
 	
-	# main route
+	# Main route
 	@app.route('/')
 	def index():
 		return 'LASERCHICKEN'
 	
-	# register db functions with the app
+	# Register db functions with the app
 	from . import db
 	db.init_app(app)
 	

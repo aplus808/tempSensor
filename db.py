@@ -9,7 +9,7 @@ from flask import current_app, g
 from flask.cli import with_appcontext
 
 global sfreq
-sfreq = 30
+sfreq = 5
 
 def init_app(app):
 	app.teardown_appcontext(close_db)
@@ -61,17 +61,17 @@ def start_log(sfreq):
 def stop_log():
 	# os.kill(getpid(), signal.SIGUSR1)
 	# check if a file exists on disk ##
-	## if exists, delete it else show message on screen ##
+	## If exists, delete it else show message on screen ##
 	pidfile = current_app.config['PIDFILE']
 	if os.path.exists(pidfile):
 		try:
-			#read pid, delte pidfile, kill process
+			#read pid, delete pidfile, kill process
 			pid = getpid(pidfile)
 			os.remove(pidfile)
 			os.kill(pid, signal.SIGUSR1)
 			# print("Sent kill signal to %s" % (pid))
-		except OSError:
-			print ("Error: %s - %s." % (OSError.pidfile, OSError.strerror))
+		except OSError as e:
+			print ("Read/Delete/Kill pid error: %s: %s" % (e.errno, e.strerror))
 		
 	else:
 		print("Unable to find %s" % pidfile)
@@ -100,7 +100,7 @@ def stop_log_command():
 	click.echo("Stopped log_temp.py")
 
 @click.command('start-log')
-@click.option('--freq', default=30, help="Sample frequency in seconds")
+@click.option('--freq', help="Sample frequency in seconds")
 @with_appcontext
 def start_log_command(freq):
 	global sfreq
