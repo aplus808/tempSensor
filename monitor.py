@@ -1,45 +1,43 @@
-from flask import (
-	Blueprint, flash, jsonify, render_template, request, session
-)
 
-from temp_sensor.auth import login_required
-from temp_sensor.db import get_db, get_sfreq, start_log, stop_log
-
-from datetime import datetime, timedelta
-
-from bokeh.io import curdoc
 from bokeh.embed import components
-from bokeh.models import AjaxDataSource, BoxAnnotation, ColumnDataSource, CustomJS, HoverTool, Range1d
+from bokeh.models import AjaxDataSource, BoxAnnotation, ColumnDataSource, HoverTool, Range1d
 # from bokeh.models.widgets import Button, Slider, TextInput
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 
+from datetime import datetime, timedelta
+
+from flask import (
+	Blueprint, flash, g, jsonify, render_template, request, send_from_directory, session
+)
+
+from temp_sensor.auth import login_required
+from temp_sensor.db import isrunning, get_db, get_sfreq, start_log, stop_log
+# from temp_sensor.camera import get_camera, get_camera_images_path, take_image
+import temp_sensor.camera as Camera
+
+import time
+
 bp = Blueprint('monitor', __name__, url_prefix='/monitor')
 
-pollfreq = 10
-range = 3600
+pollfreq = 10 # 10 seconds
+range = 3600 # 10 minutes
+source = ColumnDataSource()
 
 def get_initial_data(range):
 	db = get_db()
 	dates = []
 	tempfs = []
 
-	ldate, ltempf = data(j=False)
+	ldate, ltempf = data(j=0)
 	ldatetime = datetime.strptime(ldate, "%Y-%m-%d %H:%M:%S")
 	fdate = ldatetime - timedelta(seconds=int(range))
 	fdate = datetime.strftime(fdate, "%Y-%m-%d %H:%M:%S")
-	# print("ldate:", ldate)
-	# print("fdate:", fdate)
 	rangecount = db.execute('SELECT COUNT(*) FROM temperatures WHERE timestamp BETWEEN ? and ?', (fdate, ldate)).fetchone()[0]
 	
 	range = min(rangecount, 200)
 	interval = rangecount//range
-	# print("range:", range)
-	# print("rangecount:", rangecount)
-	# print("interval:", interval)
 	
-	
-	# for row in db.execute('SELECT timestamp, tempf FROM temperatures ORDER BY timestamp DESC LIMIT ' + str(range)):
 	i = 0
 	for row in db.execute('SELECT timestamp, tempf FROM temperatures WHERE timestamp BETWEEN ? and ? ORDER BY timestamp DESC', (fdate, ldate)):
 		if i % interval == 0:
@@ -49,7 +47,6 @@ def get_initial_data(range):
 	
 	dates = list(reversed(dates))
 	tempfs = list(reversed(tempfs))
-	# print(len(dates))
 	
 	return dates, tempfs
 
@@ -59,10 +56,9 @@ def date_to_millis(s):
 	return (s - epoch).total_seconds() * 1000.0
 
 
-
 @login_required
 @bp.route('/data', methods=['POST'])
-def data(j=True):
+def data(j=1):
 	date = []
 	tempf = []
 	try:
@@ -73,27 +69,38 @@ def data(j=True):
 	else:
 		pass
 	
+	if request.form.get('j') is not None:
+		j = int(request.form.get('j'))
+	
 	if row is not None:
 		date = row[0]
 		tempf = row[1]
-		if j:
+		# If j > 0, return jsonified date, else return date string
+		if j == 1:
+			date = date_to_millis(date)
+			return jsonify(x=[date], y=[tempf])
+		elif j == 2:
 			return jsonify(x=[date], y=[tempf])
 		else:
 			return date, tempf
 		
 
-
 @login_required
-@bp.route('/test', methods=['POST', 'GET'])
-def test():
-	if request.method == 'GET':
-		args = request.args
-		if args is not None and len(args) > 0:
-			for arg, val in args.items():
-				print(str(arg), str(val))
-				
-
-	return jsonify(title=["Bawkbawk"], html=["<p>Jeebus</p>"])
+@bp.route('/data/camera', methods=['POST'])
+def data_cam():
+	img = Camera.take_image()
+	timestamp = img[7:-4]
+	try:
+		timestamp = datetime.strptime(timestamp, "%Y%b%d_%H%M%S")
+		print("timestamp:", timestamp)
+		# get_db().execute("INSERT INTO camera (timestamp, filename) VALUES ((?), (?))", (timestamp, img))
+		
+	except sqlite3.Error as e:
+		print("sqlite3.Error: ", e.args[0])
+	else:
+		pass
+	Camera.close_camera()
+	return jsonify(img=img, timestamp=timestamp)
 	
 	
 @bp.route('/', methods=['GET', 'POST'])
@@ -101,26 +108,36 @@ def test():
 def index():
 	global pollfreq
 	global range
+	global source
 	post = False
 	
+	# Set the request method
 	if request.method == 'POST':
 		range = request.form['range']
 		post = True
-	# print("range:", range)
+	
+	# Check log_temp.py
+	if isrunning() == False:
+		start_log(pollfreq)
+		time.sleep(1)
 
 	# Initialize figure data and data source
-	source = AjaxDataSource(data_url="/monitor/data", max_size=5000,
-							polling_interval=pollfreq * 1000, mode='append')
+	source = AjaxDataSource(
+		data_url="/monitor/data",
+		max_size=5000,
+		polling_interval=pollfreq * 1000,
+		mode='append'
+	)
+		
 							
 	dates = []
 	tempfs = []
 	dates, tempfs = get_initial_data(range)
-	
 	source.data = dict(x=dates, y=tempfs)
-	
+		
 	# Create the plot
 	TOOLS = "pan,wheel_zoom,box_zoom,reset,save"
-	fig = figure(title='DS18B20 Sensor', x_axis_type='datetime', tools=TOOLS, plot_height=280, sizing_mode='scale_width')
+	fig = figure(title='DS18B20 Sensor', x_axis_type='datetime', tools=TOOLS, plot_height=140, sizing_mode='scale_width')
 	hover = HoverTool(
 		tooltips=[
 			('temp', '@y{0.00}'),
@@ -145,7 +162,9 @@ def index():
 	fig.add_layout(BoxAnnotation(bottom=80, fill_alpha=0.1, fill_color='red'))
 	
 	plot_script, plot_div = components(fig)
-
+	
+	img = data_cam().get_json()['img']
+	
 	if post:
 		return (jsonify(plotscript=plot_script, plotdiv=plot_div))
 	else:
@@ -154,4 +173,5 @@ def index():
 			plot_script=plot_script,
 			plot_div=plot_div,
 			pollfreq=pollfreq,
+			img=img,
 		)

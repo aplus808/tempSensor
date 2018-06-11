@@ -9,11 +9,14 @@ def create_app(test_config=None):
 	# Create and configure the app
 	app = Flask(__name__, instance_relative_config=True)
 	app.config.from_mapping(
-		SECRET_KEY = 'dev',
+		CAMERA = None,
+		CAMERA_IMAGES = os.path.join(app.static_folder, 'images/'),
+		CAMERA_VIDEOS = os.path.join(app.static_folder, 'videos/'),
 		DATABASE = os.path.join(app.instance_path, 'temp_sensor.sqlite3'),
 		PIDFILE = os.path.join(app.instance_path, 'log_temp_pid.txt'),
 		LOGTEMP = os.path.join(app.root_path, 'log_temp.py'),
-		PERMANENT_SESSION_LIFETIME = timedelta(minutes = 20)
+		PERMANENT_SESSION_LIFETIME = timedelta(minutes = 20),
+		SECRET_KEY = 'dev'
 	)
 
 	if test_config is None:
@@ -37,6 +40,10 @@ def create_app(test_config=None):
 	# Register db functions with the app
 	from . import db
 	db.init_app(app)
+	
+	# Register camera functions with the app
+	from . import camera
+	camera.init_app(app)
 	
 	from . import auth
 	app.register_blueprint(auth.bp)

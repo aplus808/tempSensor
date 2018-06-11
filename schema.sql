@@ -13,3 +13,9 @@ CREATE TABLE temperatures (
   tempc NUMERIC,
   tempf NUMERIC
 );
+
+CREATE TABLE camera (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp DATETIME,
+  filename TEXT
+);

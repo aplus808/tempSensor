@@ -28,7 +28,7 @@
 			console.log("pollfreq:" + {{ pollfreq }})
 			var interval = {{ pollfreq }} * 1000;
 			setInterval(function() {
-				var dat = {current : true};
+				var dat = {'j' : 2};
 				$.ajax({
 					url: "/monitor/data",
 					method: 'POST',
@@ -38,7 +38,7 @@
 						var date = moment(result.x, "YYYY-MM-DD HH:mm:ss");
 						var temp = result.y;
 						temp = parseFloat(Math.round(temp * 100) / 100).toFixed(2);
-						$("#curr").attr({"class" : "col-3 bg-primary text-white"});
+						$("#curr").attr({"class" : "col-4 bg-info text-white"});
 						$("#currtext").text("Last temp (F): ");
 						$("#currtemp").html(temp);
 						$("#currdate").html(date.format("ddd, MMM D, h:mm:ss a"));
@@ -66,7 +66,28 @@
 					},
 					'json',
 				)
-			})
+			});
+			
+			var image = "{{ img }}"
+			$('#c_img').attr({"src" : {{ url_for('static', filename='') }} + String(image)});
+			$(document).on('click', '#c_btn', function (event) {
+				//alert("c_btn clicked");
+				$.post(
+					$(this).attr("action"),
+					{},
+					function(data, status) {
+						//alert("Status: " + status + "\nData: " + data);
+						//console.log(data);
+						var imgpath = {{ url_for('static', filename='') }};
+						imgpath = imgpath + data.img;
+						$('#c_img').attr({"src" : imgpath});
+						$('#c_spn').html(data.timestamp);
+					},
+					'json',
+				)
+			});
+			
+
 		});
 	</script>
 	
@@ -110,7 +131,7 @@
 			<div class="row justify-content-center">
 				<div class="col-1">
 				</div>
-				<div class="col-3 bg-primary text-white">
+				<div class="col-3 bg-info text-white">
 					Poll freq (s): {{ pollfreq }}
 				</div>
 				<div class="col-3" id="curr">
@@ -121,20 +142,9 @@
 				<div class="col-1">
 				</div>
 			</div>
-			
-			<div class="row">
-				<div class="col-11" id="p_d_div">
-					{{ plot_div | safe }}
-				</div>
-			</div>
-			<br><br>
-			<div class="row justify-content-center" id="r_div"></div>
 			<br>
 			<div class="row justify-content-center">
-				
-				<!-- <form action="javascript:alert( 'Bawk!' );" method="post" id="form_range"> -->
 				<form action="{{ url_for('monitor.index') }}" method="post" id="form_range">
-				
 				<div id="tr_opt" class="btn-group btn-group-toggle" data-toggle="buttons">
 					<label class="btn btn-info active" id="l_opt_1">
 						<input type="radio" name="options" id="r_opt_1" value="600" autocomplete="off" checked=""> 10m
@@ -152,7 +162,33 @@
 						<input type="radio" name="options" id="r_opt_5" value="604800" autocomplete="off"> 7d
 					</label>
 				</div>
-				</form><br>
+				</form>
+			</div>
+
+			<br>
+			<div class="row justify-content-center" id="r_div"></div>
+			<br>
+			
+			<div class="row">
+				<div class="col-11" id="p_d_div">
+					{{ plot_div | safe }}
+				</div>
+			</div>
+			<br>
+			<div class="row justify-content-center">
+				
+				<!-- <form action="javascript:alert( 'Bawk!' );" method="post" id="form_range"> -->
+				<br>
+			</div>
+			<div class="row" id="c_row">
+				<div class="col-3">
+					<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.data_cam') }}"> Take Image </button>
+				</div>
+				<div class="col" id="c_col">
+					<span id="c_spn"></span>
+					<br>
+					<img id='c_img'>
+				</div>
 			</div>
 		</div>
 	<span id="s1"></span>	
