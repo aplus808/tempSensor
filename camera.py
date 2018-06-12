@@ -21,12 +21,11 @@ def get_camera():
 		# print("CAMERA does not exist")
 		camera = PiCamera(
 			resolution = (1280, 720),
-			# rotation = 180,
 			# framerate = Fraction(1, 6),
 			# sensor_mode = 3,
 		)
-		camera.rotation = 180
-		camera.shutter_speed = 6000000
+		# camera.rotation = 180
+		# camera.shutter_speed = 500000
 		camera.iso = 800
 		# print(camera)
 		current_app.config['CAMERA'] = camera
@@ -66,14 +65,30 @@ def init_camera():
 def take_image():
 	camera = get_camera()
 	camera.start_preview()
-	time.sleep(3)
-	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%b%d_%H%M%S")
+	time.sleep(10)
+	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
 	imgpath = current_app.config['CAMERA_IMAGES'] +  ts + ".jpg"
-	print("imgpath:", imgpath)
+	imgstr = "images/" + ts + ".jpg"
+	# print("imgpath:", imgpath)
 	camera.capture(imgpath)
 	camera.stop_preview()
 	close_camera()
-	return "images/" + ts + ".jpg"
+	return imgstr
+	
+def take_video():
+	camera = get_camera()
+	camera.start_preview()
+	time.sleep(5)
+	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
+	vidpath = current_app.config['CAMERA_VIDEOS'] +  ts + ".h264"
+	vidstr = "videos/" + ts + ".h264"
+	# print("vidpath:", vidpath)
+	camera.start_recording(vidpath, format='h264')
+	camera.wait_recording(10)
+	camera.stop_recording()
+	camera.stop_preview()
+	close_camera()
+	return vidstr
 	
 @click.command('init-camera')
 @with_appcontext
@@ -87,4 +102,11 @@ def init_camera_command():
 def image_camera_command():
 	"""Take a single image"""
 	p = take_image()
+	click.echo("Click! " + p)
+
+@click.command('video-camera')
+@with_appcontext
+def image_camera_command():
+	"""Take a 10 second video"""
+	p = take_video()
 	click.echo("Click! " + p)

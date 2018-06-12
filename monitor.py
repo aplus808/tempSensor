@@ -90,15 +90,15 @@ def data(j=1):
 def data_cam():
 	img = Camera.take_image()
 	timestamp = img[7:-4]
-	try:
-		timestamp = datetime.strptime(timestamp, "%Y%b%d_%H%M%S")
-		print("timestamp:", timestamp)
+	# try:
+		#timestamp = datetime.strptime(timestamp, "%Y%b%d_%H%M%S")
+		# print("timestamp:", timestamp)
 		# get_db().execute("INSERT INTO camera (timestamp, filename) VALUES ((?), (?))", (timestamp, img))
 		
-	except sqlite3.Error as e:
-		print("sqlite3.Error: ", e.args[0])
-	else:
-		pass
+	# except sqlite3.Error as e:
+		# print("sqlite3.Error: ", e.args[0])
+	# else:
+		# pass
 	Camera.close_camera()
 	return jsonify(img=img, timestamp=timestamp)
 	
@@ -137,7 +137,14 @@ def index():
 		
 	# Create the plot
 	TOOLS = "pan,wheel_zoom,box_zoom,reset,save"
-	fig = figure(title='DS18B20 Sensor', x_axis_type='datetime', tools=TOOLS, plot_height=140, sizing_mode='scale_width')
+	fig = figure(
+		title='DS18B20 Sensor',
+		x_axis_type='datetime',
+		tools=TOOLS,
+		height=200,
+		# width=300,
+		sizing_mode='scale_width',
+	)
 	hover = HoverTool(
 		tooltips=[
 			('temp', '@y{0.00}'),
@@ -163,11 +170,11 @@ def index():
 	
 	plot_script, plot_div = components(fig)
 	
-	img = data_cam().get_json()['img']
 	
 	if post:
 		return (jsonify(plotscript=plot_script, plotdiv=plot_div))
 	else:
+		img = data_cam().get_json()['img']
 		return render_template(
 			"monitor/index.html",
 			plot_script=plot_script,

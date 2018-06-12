@@ -4,6 +4,7 @@
 	<link href="{{ url_for('static', filename='css/bokeh-0.12.16.min.css') }}" rel="stylesheet">
 	<link href="{{ url_for('static', filename='css/bokeh-widgets-0.12.16.min.css') }}" rel="stylesheet">
 	<link href="{{ url_for('static', filename='css/bokeh-tables-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/fa-svg-with-js.css') }}" rel="stylesheet">
 
 	<script type="text/javascript" src="{{
 		url_for('static', filename='js/bokeh-0.12.16.min.js') }}"></script>
@@ -13,20 +14,27 @@
 		url_for('static', filename='js/bokeh-tables-0.12.16.min.js') }}"></script>
 	<script type="text/javascript" src="{{
 		url_for('static', filename='js/bokeh-gl-0.12.16.min.js') }}"></script>
-	<script type="text/javascript" src="{{
-		url_for('static', filename='js/moment-with-locales.min.js') }}"></script>
 	<script type="text/javascript">
 		Bokeh.set_log_level("info");
 	</script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/moment-with-locales.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+		url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
+	
+	
 
+	
 	<div id="p_s_div">
 		{{ plot_script | safe }}
 	</div>
+	
 	
 	<script>
 		$(document).ready(function(){
 			console.log("pollfreq:" + {{ pollfreq }})
 			var interval = {{ pollfreq }} * 1000;
+			// CURRENT TEMP
 			setInterval(function() {
 				var dat = {'j' : 2};
 				$.ajax({
@@ -38,7 +46,9 @@
 						var date = moment(result.x, "YYYY-MM-DD HH:mm:ss");
 						var temp = result.y;
 						temp = parseFloat(Math.round(temp * 100) / 100).toFixed(2);
-						$("#curr").attr({"class" : "col-4 bg-info text-white"});
+						//$("#currspin").attr({"style" : "display: none;"});
+						$("#currspin").hide();
+						//$("#curr").attr({"class" : "col-4 bg-info text-white"});
 						$("#currtext").text("Last temp (F): ");
 						$("#currtemp").html(temp);
 						$("#currdate").html(date.format("ddd, MMM D, h:mm:ss a"));
@@ -46,6 +56,7 @@
 				});
 			}, interval);  // Interval = 5000ms
 
+			// UPDATE RANGE
 			$(document).on('change', 'input:radio[id^="r_opt_"]', function (event) {
 				//alert("I am about to POST this:\n\n" + dat.range);
 				//var range = $(this);
@@ -59,19 +70,26 @@
 					function(data, status) {
 						//alert("Status: " + status + "\nData: " + data);
 						$('#p_s_div').html(data.plotscript);
+						$('#p_d_div').fadeOut();
 						$('#p_d_div').html(data.plotdiv);
+						$('#p_d_div').fadeIn();
 						$('#r_div').attr({"class" : "row justify-content-center text-primary"});
 						$('#r_div').html("Range changed to " + rangetxt.text());
-						//$('#s1').text(data.plotscript);
 					},
 					'json',
 				)
 			});
-			
-			var image = "{{ img }}"
-			$('#c_img').attr({"src" : {{ url_for('static', filename='') }} + String(image)});
+			// SHOW LATEST IMAGE
+			var image = String("{{ img }}");
+			console.log(image)
+			$('#c_vwr').append('<img></img>')
+			$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + image, "class" : "img-fluid rounded"});
+			var ts = moment(image.slice(7, -4), "YYYYMMDD_HHmmss");
+			$('#c_spn').html(ts.format("ddd, MMM D, h:mm:ss a"));
+			// TAKE IMAGE
 			$(document).on('click', '#c_btn', function (event) {
 				//alert("c_btn clicked");
+				$('#c_row').children('.col-3').toggle();
 				$.post(
 					$(this).attr("action"),
 					{},
@@ -80,14 +98,35 @@
 						//console.log(data);
 						var imgpath = {{ url_for('static', filename='') }};
 						imgpath = imgpath + data.img;
-						$('#c_img').attr({"src" : imgpath});
-						$('#c_spn').html(data.timestamp);
+						ts = moment(data.timestamp, "YYYYMMDD_HHmmss");
+						//var ts = Date(data.timestamp);
+						//console.log(ts.format("ddd, MMM D, h:mm:ss a"));
+						$('#c_row').children('.col-3').toggle();
+						$('#c_vwr').fadeOut();
+						$('#c_vwr').attr({"src" : imgpath});
+						$('#c_vwr').fadeIn();
+						$('#c_spn').html(ts.format("ddd, MMM D, h:mm:ss a"));
 					},
 					'json',
 				)
 			});
 			
-
+			// SHOW VIDEO
+			$(document).on('click', '#c_vbtn', function (event) {
+				$('#c_row').children('.col-3').toggle();
+				var txt1 = $("<div></div>").attr({"class" : "embed-responsive embed-responsive-4by3", "type": "video/mp4"});
+				var txt2 = $("<video></video>").attr({"class" : "embed-responsive-item", "src" : "{{ url_for('static', filename='videos/20180611_165332.mp4') }}", "controls" : ""});
+				$('#c_vwr').empty();
+				$('#c_vwr').append($("<div></div>").append(txt1));
+				$('.embed-responsive').append(txt2);
+				$('#c_vwr').fadeIn();
+				$('#c_row').children('.col-3').toggle();
+				
+				
+			});
+			
+			
+			
 		});
 	</script>
 	
@@ -114,7 +153,7 @@
 {% block content %}
 	{% if g.user %}
 	<body>
-		<div class="container-fluid" style="min-height:100%">
+		<div class="container-fluid">
 			<div class="row">
 				<div class="col-1">
 				</div>
@@ -134,11 +173,19 @@
 				<div class="col-3 bg-info text-white">
 					Poll freq (s): {{ pollfreq }}
 				</div>
-				<div class="col-3" id="curr">
+				
+				<div class="col-4 bg-info text-white" id="curr">
+					<!-- <label id="currspin"> -->
+						<!-- <img src="{{ url_for('static', filename='spinner-rosetta-gray-24x24.gif') }}" class="mx-auto d-block"/> Polling... -->
+						<label id="currspin">
+							<i class="fas fa-spinner fa-pulse"></i> Polling...
+						</label>
+					<!-- </label> -->
 					<span id="currtext"></span>
 					<span id="currtemp"></span><br>
 					<span id="currdate"></span>
 				</div>
+				
 				<div class="col-1">
 				</div>
 			</div>
@@ -169,8 +216,8 @@
 			<div class="row justify-content-center" id="r_div"></div>
 			<br>
 			
-			<div class="row">
-				<div class="col-11" id="p_d_div">
+			<div class="row-fluid">
+				<div class="col" id="p_d_div">
 					{{ plot_div | safe }}
 				</div>
 			</div>
@@ -180,18 +227,43 @@
 				<!-- <form action="javascript:alert( 'Bawk!' );" method="post" id="form_range"> -->
 				<br>
 			</div>
-			<div class="row" id="c_row">
-				<div class="col-3">
-					<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.data_cam') }}"> Take Image </button>
+			
+			<!-- CAMERA VIEWER -->
+			<div id="cv_div">
+				<div class="row" id="c_row">
+					<div class="col-3">
+						<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.data_cam') }}"><i class="fas fa-camera-retro"></i> Take Image </button>
+					</div>
+					<div class="col-3" style="display: none;">
+						<button type="button" class="btn btn-info"><i class="fas fa-spinner fa-pulse"></i> Processing... </button>
+					</div>
+					<div class="col-3">
+						<button type="button" class="btn btn-info" id="c_vbtn"><i class="fas fa-video"></i> Show Video </button>
+					</div>
 				</div>
-				<div class="col" id="c_col">
-					<span id="c_spn"></span>
-					<br>
-					<img id='c_img'>
+				<div class="row justify-content-center">
+					<div class="col">
+						<span id="c_spn"></span>
+						<br>
+						<!-- <img class="img-fluid rounded" id='c_vwr'> -->
+						<div id="c_vwr">
+						</div>
+					</div>
 				</div>
 			</div>
+			<!-- <div class="row justify-content-center"> -->
+				<!-- <div class="col"> -->
+					<!-- <span id="c_spn"></span> -->
+					<!-- <br> -->
+					<!-- <img class="img-fluid rounded" id='c_vwr'> -->
+				<!-- </div> -->
+			<!-- </div> -->
+			
+			<!-- <div class="row justify-content-center" id='c_vid'></div> -->
+			
 		</div>
-	<span id="s1"></span>	
+		
+		<br><br>
 	</body>
 	{% endif %}
 	
