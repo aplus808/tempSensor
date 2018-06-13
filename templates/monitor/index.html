@@ -52,6 +52,7 @@
 						$("#currtext").text("Last temp (F): ");
 						$("#currtemp").html(temp);
 						$("#currdate").html(date.format("ddd, MMM D, h:mm:ss a"));
+						//$('#c_spn').html(moment().format("ddd, MMM D, h:mm:ss"));
 					}	
 				});
 			}, interval);  // Interval = 5000ms
@@ -79,17 +80,23 @@
 					'json',
 				)
 			});
+			
 			// SHOW LATEST IMAGE
 			var image = String("{{ img }}");
-			console.log(image)
-			$('#c_vwr').append('<img></img>')
-			$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + image, "class" : "img-fluid rounded"});
-			var ts = moment(image.slice(7, -4), "YYYYMMDD_HHmmss");
-			$('#c_spn').html(ts.format("ddd, MMM D, h:mm:ss a"));
+			//console.log(image);
+			$('#c_vwr').append('<img></img>');
+			$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + image, "class" : "img-fluid rounded", "id" : "c_img"});
+			var ts = moment().format("ddd, MMM D, h:mm:ss");
+			$('#c_spn').html(ts);
+			
+			$(document).on('change', '#c_img', function() {
+				console.log("!")
+			});
+			
 			// TAKE IMAGE
 			$(document).on('click', '#c_btn', function (event) {
 				//alert("c_btn clicked");
-				$('#c_row').children('.col-3').toggle();
+				$('#c_row').children('div').toggle();
 				$.post(
 					$(this).attr("action"),
 					{},
@@ -101,9 +108,13 @@
 						ts = moment(data.timestamp, "YYYYMMDD_HHmmss");
 						//var ts = Date(data.timestamp);
 						//console.log(ts.format("ddd, MMM D, h:mm:ss a"));
-						$('#c_row').children('.col-3').toggle();
+						$('#c_row').children('div').toggle();
 						$('#c_vwr').fadeOut();
-						$('#c_vwr').attr({"src" : imgpath});
+						$('#c_vwr').empty();
+						$('#c_vwr').append('<img></img>');
+						$('#c_vwr').children('img').attr({"src" : imgpath, "class" : "img-fluid rounded", "id" : "c_img"});
+						$('#c_sbtn').show()
+						$('#c_vbtn').show()
 						$('#c_vwr').fadeIn();
 						$('#c_spn').html(ts.format("ddd, MMM D, h:mm:ss a"));
 					},
@@ -111,14 +122,41 @@
 				)
 			});
 			
+			// SHOW STREAM
+			$(document).on('click', '#c_sbtn', function (event) {
+				$('#c_row').children('div').toggle();
+				$('#c_vwr').empty();
+				
+				$('#c_vwr').append('<img></img>');
+				$('#c_vwr').children('img').attr({"src" : "{{ url_for('monitor.stream') }}", "class" : "img-fluid rounded", "id" : "c_img"});
+				ts = moment().format("ddd, MMM D, h:mm:ss");
+				$('#c_spn').html(ts);
+				$('#c_sbtn').hide()
+				$('#c_vbtn').show()
+				$('#c_vwr').fadeIn();
+				$('#c_row').children('div').toggle();
+				
+				
+			});
+			
 			// SHOW VIDEO
 			$(document).on('click', '#c_vbtn', function (event) {
+				$.post(
+					"{{ url_for('monitor.cam_utils', op='kill') }}",
+					{},
+					function(data, status) {
+						console.log("Status: " + status + "\nData: " + data)
+					},
+					'json',
+				);
 				$('#c_row').children('.col-3').toggle();
 				var txt1 = $("<div></div>").attr({"class" : "embed-responsive embed-responsive-4by3", "type": "video/mp4"});
-				var txt2 = $("<video></video>").attr({"class" : "embed-responsive-item", "src" : "{{ url_for('static', filename='videos/20180611_165332.mp4') }}", "controls" : ""});
+				var txt2 = $("<video></video>").attr({"class" : "embed-responsive-item", "src" : "{{ url_for('static', filename='videos/test.mp4') }}", "controls" : ""});
 				$('#c_vwr').empty();
 				$('#c_vwr').append($("<div></div>").append(txt1));
 				$('.embed-responsive').append(txt2);
+				$('#c_vbtn').hide()
+				$('#c_sbtn').show()
 				$('#c_vwr').fadeIn();
 				$('#c_row').children('.col-3').toggle();
 				
@@ -231,35 +269,23 @@
 			<!-- CAMERA VIEWER -->
 			<div id="cv_div">
 				<div class="row" id="c_row">
-					<div class="col-3">
-						<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.data_cam') }}"><i class="fas fa-camera-retro"></i> Take Image </button>
+					<div class="col">
+						<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.cam_image') }}"><i class="fas fa-camera-retro"></i> Take Image </button>
+						<button type="button" class="btn btn-info" id="c_sbtn"><i class="fas fa-video"></i> Show Stream </button>
+						<button type="button" class="btn btn-info" id="c_vbtn"><i class="fas fa-video"></i> Show Video </button>
 					</div>
 					<div class="col-3" style="display: none;">
 						<button type="button" class="btn btn-info"><i class="fas fa-spinner fa-pulse"></i> Processing... </button>
-					</div>
-					<div class="col-3">
-						<button type="button" class="btn btn-info" id="c_vbtn"><i class="fas fa-video"></i> Show Video </button>
 					</div>
 				</div>
 				<div class="row justify-content-center">
 					<div class="col">
 						<span id="c_spn"></span>
 						<br>
-						<!-- <img class="img-fluid rounded" id='c_vwr'> -->
-						<div id="c_vwr">
-						</div>
+						<div id="c_vwr"></div>
 					</div>
 				</div>
 			</div>
-			<!-- <div class="row justify-content-center"> -->
-				<!-- <div class="col"> -->
-					<!-- <span id="c_spn"></span> -->
-					<!-- <br> -->
-					<!-- <img class="img-fluid rounded" id='c_vwr'> -->
-				<!-- </div> -->
-			<!-- </div> -->
-			
-			<!-- <div class="row justify-content-center" id='c_vid'></div> -->
 			
 		</div>
 		

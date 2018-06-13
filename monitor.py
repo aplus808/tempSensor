@@ -8,13 +8,13 @@ from bokeh.resources import CDN
 from datetime import datetime, timedelta
 
 from flask import (
-	Blueprint, flash, g, jsonify, render_template, request, send_from_directory, session
+	Blueprint, flash, g, jsonify, render_template, Response, request, send_from_directory, session
 )
 
 from temp_sensor.auth import login_required
 from temp_sensor.db import isrunning, get_db, get_sfreq, start_log, stop_log
-# from temp_sensor.camera import get_camera, get_camera_images_path, take_image
-import temp_sensor.camera as Camera
+# import temp_sensor.camera as Camera
+from temp_sensor.camera import Camera
 
 import time
 
@@ -86,12 +86,15 @@ def data(j=1):
 		
 
 @login_required
-@bp.route('/data/camera', methods=['POST'])
-def data_cam():
+@bp.route('/data/camera/image', methods=['POST'])
+def cam_image():
+	Camera.kill_thread()
+	time.sleep(1)
 	img = Camera.take_image()
+	# img = "images/20180613_001546.jpg"
 	timestamp = img[7:-4]
 	# try:
-		#timestamp = datetime.strptime(timestamp, "%Y%b%d_%H%M%S")
+		# timestamp = datetime.strptime(timestamp, "%Y%b%d_%H%M%S")
 		# print("timestamp:", timestamp)
 		# get_db().execute("INSERT INTO camera (timestamp, filename) VALUES ((?), (?))", (timestamp, img))
 		
@@ -99,10 +102,36 @@ def data_cam():
 		# print("sqlite3.Error: ", e.args[0])
 	# else:
 		# pass
-	Camera.close_camera()
+	# Camera.close_camera()
+	
+	
 	return jsonify(img=img, timestamp=timestamp)
-	
-	
+
+
+def gen(camera):
+	"""Video streaming generator function."""
+	while True:
+		frame = camera.get_frame()
+		yield (b'--frame\r\n'
+			b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@login_required
+@bp.route('/data/camera/stream')
+def stream():
+	"""Video streaming route. Put this in the src attribute of an img tag."""
+	return Response(gen(Camera()),
+		mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@login_required
+@bp.route('/data/camera/utils/<op>', methods=['POST'])
+def cam_utils(op):
+	"""Camera utilities."""
+	print("op:", op)
+	if op == 'kill':
+		Camera.kill_thread()
+	return jsonify("You rang?")
+
+		
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
@@ -174,7 +203,8 @@ def index():
 	if post:
 		return (jsonify(plotscript=plot_script, plotdiv=plot_div))
 	else:
-		img = data_cam().get_json()['img']
+		# img = cam_image().get_json()['img']
+		img = 'images/20180613_001546.jpg'
 		return render_template(
 			"monitor/index.html",
 			plot_script=plot_script,

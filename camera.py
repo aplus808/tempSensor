@@ -1,4 +1,5 @@
 import datetime
+import io
 import os
 import subprocess
 import signal
@@ -8,9 +9,50 @@ import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 from picamera import PiCamera
+from temp_sensor.base_camera import BaseCamera
 
 global sfreq
 sfreq = 5
+
+class Camera(BaseCamera):
+	@staticmethod
+	def frames():
+		# with picamera.PiCamera(
+		with PiCamera(
+			# resolution = (1280, 720),
+			# framerate = Fraction(1, 6),
+			# sensor_mode = 3,
+		) as camera:
+			camera.iso = 800
+			# let camera warm up
+			time.sleep(2)
+
+			stream = io.BytesIO()
+			for _ in camera.capture_continuous(stream, 'jpeg',
+												use_video_port=True):
+				# return current frame
+				stream.seek(0)
+				yield stream.read()
+
+				# reset stream for next frame
+				stream.seek(0)
+				stream.truncate()
+	
+	@staticmethod
+	def take_image():
+		with PiCamera(
+			resolution = (1280, 720),
+		) as camera:
+			camera.iso = 800
+			time.sleep(2)
+			ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
+			imgpath = current_app.config['CAMERA_IMAGES'] +  ts + ".jpg"
+			imgstr = "images/" + ts + ".jpg"
+			# print("imgpath:", imgpath)
+			camera.capture(imgpath)
+			camera.stop_preview()
+			# close_camera()
+			return imgstr
 
 def init_app(app):
 	app.cli.add_command(init_camera_command)
@@ -35,6 +77,7 @@ def get_camera():
 def close_camera():
 	if current_app.config['CAMERA'] is not None:
 		current_app.config['CAMERA'].close()
+		print("close_camera()")
 		current_app.config['CAMERA'] = None
 
 def get_camera_images_path():
@@ -65,7 +108,7 @@ def init_camera():
 def take_image():
 	camera = get_camera()
 	camera.start_preview()
-	time.sleep(10)
+	time.sleep(5)
 	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
 	imgpath = current_app.config['CAMERA_IMAGES'] +  ts + ".jpg"
 	imgstr = "images/" + ts + ".jpg"
@@ -89,7 +132,10 @@ def take_video():
 	camera.stop_preview()
 	close_camera()
 	return vidstr
-	
+
+def stream_jpg():
+	return
+
 @click.command('init-camera')
 @with_appcontext
 def init_camera_command():
