@@ -91,7 +91,7 @@ class BaseCamera(object):
 	def kill_thread():
 		""""Set killthread to True"""
 		BaseCamera.killthread = True
-		print("! killthread:", BaseCamera.killthread)
+		# print("! killthread:", BaseCamera.killthread)
 
 	@classmethod
 	def _thread(cls):

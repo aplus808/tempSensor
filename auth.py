@@ -59,7 +59,7 @@ def register():
 
 		flash(error)
 
-	return render_template('auth/register.html')
+	return render_template('auth/register.html', message_color='warning')
 
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
@@ -81,17 +81,17 @@ def login():
 			session.clear()
 			session['user_id'] = user['id']
 			session.permanent = True
-			flash(username + ", login successful")
+			flash(username + ", login successful.")
 			return redirect(url_for('monitor.index'))
 
 		flash(error)
 	elif g.user is not None:
-		return redirect(url_for('monitor.index'))
+		return redirect(url_for('monitor.index', message_color='warning'))
 
 	return render_template('auth/login.html')
 
 @bp.route('/logout')
 def logout():
 	session.clear()
-	flash("Logout succssful")
+	flash("Logout successful.")
 	return redirect(url_for('auth.login'))

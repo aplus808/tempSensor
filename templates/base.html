@@ -7,6 +7,8 @@
 	<title>{% block title %}{% endblock %} - temp_sensor</title>
 	
 	<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/thumbnail-gallery.css') }}" rel="stylesheet">
+
 	<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 	
 	<script type=text/javascript src="{{
@@ -15,25 +17,62 @@
 		url_for('static', filename='js/popper.min.js') }}"></script>
 	<script type=text/javascript src="{{
 		url_for('static', filename='js/bootstrap.min.js') }}"></script>
+
+	<script>
+		$(document).ready(function() {
+			// Change the alert background color to 'success' if the text contains 'success'
+			var alerts = $('.alert');
+			var success = alerts.text().indexOf("success");
+			if (success > 0) {
+				alerts.attr({"class" : "alert alert-success alert-dismissible"});
+			};
+			
+			// Handle the nav active state
+			$('a[href="' + this.location.pathname + '"]').parents('li,ul').addClass('active');
+		});
+
+	</script>
+
 	{% block headscripts %}{% endblock %}
 </head>
-<nav>
+<nav class="navbar navbar-expand-sm navbar-dark bg-dark fixed-top">
 	<div class="container-fluid" style="min-height:100%">
-	<h3>laserchicken.win</h3>
-	<div class="row">
-			<div class="col-9">
-				{% block navcol %}{% endblock %}
-			</div>
-			<div class="col-1">
+		<a class="navbar-brand" href="#">laserchicken.win</a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		
+		<div class="collapse navbar-collapse" id="navbarResponsive">
+			<ul class="navbar-nav ml-auto">
 				{% if g.user %}
-					<span>{{ g.user['username'] }}</span>
-					<a href="{{ url_for('auth.logout') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-out"></span> Logout</a>
+				<li class="nav-item">
+					<a class="nav-link"><span class="text-info">{{ g.user['username'] }}</span></a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+				</li>
 				{% else %}
-					<!-- <a href="{{ url_for('auth.register') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-in"></span> Register</a> -->
-					<a href="{{ url_for('auth.login') }}"class="btn btn-default btn-sm" role="button" aria-disabled="true"><span class="glyphicon glyphicon-log-in"></span> Login</a>
+				<li class="nav-item">
+					<a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+				</li>
 				{% endif %}
-
-			</div>
+				{% block navlink %}{% endblock %}
+				<li class="nav-item">
+					<a class="nav-link" href="{{ url_for('monitor.index') }}">Monitor</a>
+				</li>
+				<!-- <li class="nav-item">
+					<a class="nav-link" href="{{ url_for('monitor.show_gallery') }}">Gallery</a>
+				</li> -->
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+					Gallery
+					</a>
+					<div class="dropdown-menu" aria-labelledby="navbarDropdown">
+						<a class="dropdown-item" href="{{ url_for('monitor.show_gallery', format='JPEG') }}">Images</a>
+						<a class="dropdown-item" href="{{ url_for('monitor.show_gallery', format='MP4') }}">Videos</a>
+					</div>
+				</li>
+			</ul>
 		</div>
 	</div>
 </nav>

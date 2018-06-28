@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS temperatures;
+DROP TABLE IF EXISTS camera;
 
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,5 +18,13 @@ CREATE TABLE temperatures (
 CREATE TABLE camera (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp DATETIME,
-  filename TEXT
+  content_type TEXT,
+  filename TEXT,
+  filepath TEXT,
+  iso NUMERIC,
+  resolution TEXT,
+  framerate NUMERIC,
+  framerate_range TEXT,
+  sensor_mode NUMERIC,
+  active NUMERIC
 );

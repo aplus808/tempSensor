@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block headscripts %}
+	<link href="{{ url_for('static', filename='css/bokeh-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/bokeh-widgets-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/bokeh-tables-0.12.16.min.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/fa-svg-with-js.css') }}" rel="stylesheet">
+	<link href="{{ url_for('static', filename='css/thumbnail-gallery.css') }}" rel="stylesheet">
+
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/bokeh-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/bokeh-widgets-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/bokeh-tables-0.12.16.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/bokeh-gl-0.12.16.min.js') }}"></script>
+	<script type="text/javascript">
+		Bokeh.set_log_level("info");
+	</script>
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/moment-with-locales.min.js') }}"></script>
+	<script type="text/javascript" src="{{
+	url_for('static', filename='js/fontawesome-all.min.js') }}"></script>
+	
+	<script type="application/javascript">
+		$(document).ready(function() {
+
+			var targetNodes = $(".modal");  // Set target node(s)
+			var MutationObserver = window.MutationObserver || window.WebKitMutationObserver;
+			var myObserver = new MutationObserver (mutationHandler);  // Create observer with callback function
+			var obsConfig = { childList: true, characterData: true, attributes: true, subtree: true };  // Config options
+
+			// Add a target node to the observer. Can only add one node at a time.
+			targetNodes.each(function() {
+				myObserver.observe(this, obsConfig);
+				// console.log("Observing:", this);
+			});
+			
+			// Callback function
+			function mutationHandler(mutationRecords) {
+				// console.info ("mutationHandler:");
+				mutationRecords.forEach(function (mutation) {
+					// console.log ("Mutation:", mutation);
+					// console.log ("\ttype:", mutation.type);
+					if (mutation.target.style.display == "none") {
+						$("div.col-lg-3.col-md-4.col-xs-6").removeAttr("style");
+					} else {
+						$("div.col-lg-3.col-md-4.col-xs-6").attr({"style" : "filter: blur(4px)"});
+					};
+				});
+			}
+
+			// On gallery image click
+			$("img[id^='img_']").click(function (event) {
+				var $id = $(this).attr("id").slice(4);
+				// console.log("CLICK", "id:", $id);
+				var $imgsrc = $("img#img_" + $id).attr("src");
+				var ts = moment($imgsrc.slice(15), "YYYYMMDD_HHmmss");
+				$("#mimg").attr({"class" : "img-fluid rounded", "src" : $imgsrc});
+				$("figcaption").html(ts.format("ddd, MMM D, h:mm:ss a") + "<small><a href='" + $imgsrc + "'>" + $imgsrc.slice(15) + "</a></small>");
+				$("div.modal").modal();
+			});
+
+			// On Convert button click
+			$("#convert").click(function() {
+				$.post(
+					"{{ url_for('monitor.cam_utils', op='convert') }}",
+					{"filename" : "20180627_213201.h264"},
+				);
+			});
+		});
+		
+	</script>
+
+{% endblock %}
+
+{% block header %}
+<div class="container" align="center">
+	<h3>{% block title %}Image Gallery{% endblock %}</h3>
+</div>
+{% endblock %}
+
+{% block navcol %}
+	{% if g.user %}
+	<div class="container">
+		<div class="row">
+		<div class="col">
+			<p><b>BAWK BAWK</b></p>
+		</div>
+		</div>
+	</div>
+	{% endif %}
+{% endblock %}
+
+{% block content %}
+	<body>
+		<!-- Page Content -->
+		<div class="container">
+
+			<!-- <h1 class="my-4 text-center text-lg-left">Thumbnail Gallery</h1> -->
+			<div>
+				<button type="button" class="btn btn-warning" id="convert">CONVERT</button>
+			</div>
+
+			<div class="row text-center text-lg-left">
+
+				{% for image in gallery %}
+				<!-- Thumbnail -->
+				<div class="col-lg-3 col-md-4 col-xs-6">
+					<div class="galleryThumbnail">
+						<a href="#" class="d-block mb-4 h-100">
+							<img id="img_{{ image[0] }}" class="img-rounded" src="{{ url_for('static', filename=image[1]) }}" alt="{{ image[1] }}" >
+						</a>
+					</div>
+				</div>
+				{% endfor %}
+				<!-- Modal -->
+				<div class="modal fade" role="dialog">
+					<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+						<div class="modal-content">
+							<!-- <div class="modal-header"> -->
+								<!-- <h5 class="modal-title" id="exampleModalCenterTitle">Modal title</h5> -->
+								<!-- <button type="button" class="close" data-dismiss="modal"> -->
+									<!-- <span>&times;</span> -->
+								<!-- </button> -->
+							<!-- </div> -->
+							<div class="modal-body">
+								<button type="button" class="close" data-dismiss="modal">
+									<span>&times;</span>
+								</button>
+								<img id="mimg"></img>
+								<figcaption><small></small></figcaption>
+							</div>
+							<!-- <div class="modal-footer"> -->
+								<!-- <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
+								<!-- <button type="button" class="btn btn-primary">Save changes</button> -->
+							<!-- </div> -->
+						</div>
+					</div>
+				</div>
+				
+			</div>
+		</div>
+	</body>
+{% endblock %}

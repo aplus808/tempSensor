@@ -3,6 +3,7 @@ import io
 import os
 import subprocess
 import signal
+import sqlite3
 import time
 
 import click
@@ -10,26 +11,30 @@ from flask import current_app, g
 from flask.cli import with_appcontext
 from picamera import PiCamera
 from temp_sensor.base_camera import BaseCamera
+from temp_sensor.db import get_db, log_image
 
-global sfreq
-sfreq = 5
 
 class Camera(BaseCamera):
+	iso = 0
+	image_resolution = (2592, 1944)
+	stream_resolution = (1280, 720)
+	video_resolution = (1920, 1080)
+	# resolution = [image_resolution, stream_resolution, video_resolution]
+
 	@staticmethod
 	def frames():
 		# with picamera.PiCamera(
 		with PiCamera(
-			# resolution = (1280, 720),
+			resolution = Camera.stream_resolution,
 			# framerate = Fraction(1, 6),
 			# sensor_mode = 3,
 		) as camera:
-			camera.iso = 800
-			# let camera warm up
-			time.sleep(2)
+			camera.iso = Camera.iso
+			# Let camera warm up
+			time.sleep(3)
 
 			stream = io.BytesIO()
-			for _ in camera.capture_continuous(stream, 'jpeg',
-												use_video_port=True):
+			for _ in camera.capture_continuous(stream, 'jpeg', use_video_port=True):
 				# return current frame
 				stream.seek(0)
 				yield stream.read()
@@ -41,50 +46,119 @@ class Camera(BaseCamera):
 	@staticmethod
 	def take_image():
 		with PiCamera(
-			resolution = (1280, 720),
+			resolution = Camera.image_resolution,
+			# sensor_mode = 2,
 		) as camera:
-			camera.iso = 800
-			time.sleep(2)
-			ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
+			camera.iso = Camera.iso
+			time.sleep(3)
+			now = datetime.datetime.now()
+			ts = datetime.datetime.strftime(now, "%Y%m%d_%H%M%S")
 			imgpath = current_app.config['CAMERA_IMAGES'] +  ts + ".jpg"
-			imgstr = "images/" + ts + ".jpg"
-			# print("imgpath:", imgpath)
+			imgstats = {
+				'ts'				: ts,
+				'timestamp'			: now,
+				'filename'			: ts + '.jpg',
+				'filepath'			: 'images/' + ts + '.jpg',
+				'content_type'		: 'JPEG',
+				'iso'				: int(camera.iso),
+				'resolution'		: str(camera.resolution),
+				'framerate'			: int(camera.framerate),
+				'framerate_range'	: str(camera.framerate_range),
+				'sensor_mode'		: int(camera.sensor_mode),
+			}
 			camera.capture(imgpath)
 			camera.stop_preview()
-			# close_camera()
-			return imgstr
+			log_image(imgstats)
+			return imgstats
 
-def init_app(app):
-	app.cli.add_command(init_camera_command)
-	app.cli.add_command(image_camera_command)
-	
-def get_camera():
-	if current_app.config['CAMERA'] is None:
-		# print("CAMERA does not exist")
-		camera = PiCamera(
-			resolution = (1280, 720),
-			# framerate = Fraction(1, 6),
-			# sensor_mode = 3,
-		)
-		# camera.rotation = 180
-		# camera.shutter_speed = 500000
-		camera.iso = 800
-		# print(camera)
-		current_app.config['CAMERA'] = camera
-	# print("current_app.config['CAMERA']:", current_app.config['CAMERA'])
-	return current_app.config['CAMERA']
+	@staticmethod
+	def take_video():
+		with PiCamera(
+			resolution = Camera.video_resolution,
+			# sensor_mode = 2,
+		) as camera:
+			camera.iso = Camera.iso
+			time.sleep(5)
+			now = datetime.datetime.now()
+			ts = datetime.datetime.strftime(now, "%Y%m%d_%H%M%S")
+			vidpath = current_app.config['CAMERA_VIDEOS'] +  ts + ".h264"
+			imgstats = {
+				'ts'				: ts,
+				'timestamp'			: now,
+				'filename'			: ts + ".h264",
+				'filepath'			: 'videos/' + ts + '.h264',
+				'content_type'		: 'H264',
+				'iso'				: int(camera.iso),
+				'resolution'		: str(camera.resolution),
+				'framerate'			: int(camera.framerate),
+				'framerate_range'	: str(camera.framerate_range),
+				'sensor_mode'		: int(camera.sensor_mode),
+			}
+			camera.start_recording(vidpath, format='h264')
+			camera.wait_recording(10)
+			camera.stop_recording()
+			camera.stop_preview()
+			log_image(imgstats)
+			return imgstats
 
-def close_camera():
-	if current_app.config['CAMERA'] is not None:
-		current_app.config['CAMERA'].close()
-		print("close_camera()")
-		current_app.config['CAMERA'] = None
+
+	@staticmethod
+	def set_iso(iso):
+		Camera.iso = int(iso)
+		print("ISO set to", Camera.iso)
+
+	@staticmethod
+	def set_resolution(resolution):
+		Camera.image_resolution = resolution
+		print("Image resolution set to", Camera.image_resolution)
+
+
+class Converter():
+	# thread = None  # background thread that reads frames from camera
+	# frame = None  # current frame is stored here by background thread
+	# last_access = 0  # time of last client access to the camera
+	# killthread = False
+	# event = CameraEvent()
+	viddir = None
+
+	def __init__(self):
+		"""Initialize Converter"""
+		Converter.viddir = current_app.config["CAMERA_VIDEOS"]
+		
+		
+	# @staticmethod
+	# def kill_thread():
+		# """"Set killthread to True"""
+		# BaseCamera.killthread = True
+		# print("! killthread:", BaseCamera.killthread)
+
+	# @classmethod
+	# def _thread(cls):
+		# """Camera background thread."""
+		# print('Starting camera thread.')
+		# frames_iterator = cls.frames()
+		# for frame in frames_iterator:
+			# BaseCamera.frame = frame
+			# BaseCamera.event.set()  # send signal to clients
+			# time.sleep(0)
+
+			# If there hasn't been any clients asking for frames in the last 10 seconds then stop the thread
+			# if time.time() - BaseCamera.last_access > 10 or BaseCamera.killthread == True:
+				# frames_iterator.close()
+				# print('Stopping camera thread.')
+				# break
+		# BaseCamera.thread = None
+
 
 def get_camera_images_path():
 	return current_app.config['CAMERA_IMAGES']
 
 def get_camera_videos_path():
 	return current_app.config['CAMERA_VIDEOS']
+
+def init_app(app):
+	app.cli.add_command(init_camera_command)
+	app.cli.add_command(image_camera_command)
 
 def init_camera():
 	# check for the camera directories
@@ -104,37 +178,9 @@ def init_camera():
 			shutil.rmtree(dir)
 			print("Creating", dir)
 			os.makedirs(dir)
-	
-def take_image():
-	camera = get_camera()
-	camera.start_preview()
-	time.sleep(5)
-	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
-	imgpath = current_app.config['CAMERA_IMAGES'] +  ts + ".jpg"
-	imgstr = "images/" + ts + ".jpg"
-	# print("imgpath:", imgpath)
-	camera.capture(imgpath)
-	camera.stop_preview()
-	close_camera()
-	return imgstr
-	
-def take_video():
-	camera = get_camera()
-	camera.start_preview()
-	time.sleep(5)
-	ts = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d_%H%M%S")
-	vidpath = current_app.config['CAMERA_VIDEOS'] +  ts + ".h264"
-	vidstr = "videos/" + ts + ".h264"
-	# print("vidpath:", vidpath)
-	camera.start_recording(vidpath, format='h264')
-	camera.wait_recording(10)
-	camera.stop_recording()
-	camera.stop_preview()
-	close_camera()
-	return vidstr
 
-def stream_jpg():
-	return
+
+
 
 @click.command('init-camera')
 @with_appcontext
@@ -147,12 +193,12 @@ def init_camera_command():
 @with_appcontext
 def image_camera_command():
 	"""Take a single image"""
-	p = take_image()
-	click.echo("Click! " + p)
+	p = Camera.take_image()
+	click.echo("Click!  images/" + p['filename'])
 
 @click.command('video-camera')
 @with_appcontext
 def image_camera_command():
 	"""Take a 10 second video"""
-	p = take_video()
-	click.echo("Click! " + p)
+	p = Camera.take_video()
+	click.echo("Click!  videos/" + p['filename'])

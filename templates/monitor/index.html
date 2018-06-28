@@ -31,11 +31,11 @@
 	
 	
 	<script>
-		$(document).ready(function(){
-			console.log("pollfreq:" + {{ pollfreq }})
+		$(document).ready(function() {
+			// console.log("pollfreq:" + {{ pollfreq }})
 			var interval = {{ pollfreq }} * 1000;
 			// CURRENT TEMP
-			setInterval(function() {
+			myPoll = setInterval(function() {
 				var dat = {'j' : 2};
 				$.ajax({
 					url: "/monitor/data",
@@ -45,14 +45,16 @@
 					success: function(result) {
 						var date = moment(result.x, "YYYY-MM-DD HH:mm:ss");
 						var temp = result.y;
+						//console.log("keep_polling: " + result.keep_polling);
+						if (result.keep_polling == "false") {
+							console.log("logging out");
+							$("#logout_link")[0].click();
+						};
 						temp = parseFloat(Math.round(temp * 100) / 100).toFixed(2);
-						//$("#currspin").attr({"style" : "display: none;"});
 						$("#currspin").hide();
-						//$("#curr").attr({"class" : "col-4 bg-info text-white"});
 						$("#currtext").text("Last temp (F): ");
 						$("#currtemp").html(temp);
 						$("#currdate").html(date.format("ddd, MMM D, h:mm:ss a"));
-						//$('#c_spn').html(moment().format("ddd, MMM D, h:mm:ss"));
 					}	
 				});
 			}, interval);  // Interval = 5000ms
@@ -66,7 +68,7 @@
 				var rangetxt = contents.slice(contents.index(range) + 1, contents.index(range) + 2);
 				//console.log("rangetxt: " + rangetxt.text());
 				$.post(
-					$('#form_range').attr("action"),
+					{{ url_for('monitor.index') }},
 					{'range' : range.val()},
 					function(data, status) {
 						//alert("Status: " + status + "\nData: " + data);
@@ -81,66 +83,92 @@
 				)
 			});
 			
-			// SHOW LATEST IMAGE
-			var image = String("{{ img }}");
-			//console.log(image);
+			// SHOW LATEST IMAGE ON INITIAL PAGE LOAD
+			var imgstats = setTS({{ imgstats | tojson | safe }});
+			setStats(imgstats);
+			var imgpath = String(imgstats['filepath']);
+			// console.log(image);
 			$('#c_vwr').append('<img></img>');
-			$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + image, "class" : "img-fluid rounded", "id" : "c_img"});
-			var ts = moment().format("ddd, MMM D, h:mm:ss");
-			$('#c_spn').html(ts);
+			$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + imgpath, "class" : "img-fluid rounded", "id" : "c_img"});
 			
-			$(document).on('change', '#c_img', function() {
-				console.log("!")
-			});
 			
 			// TAKE IMAGE
-			$(document).on('click', '#c_btn', function (event) {
-				//alert("c_btn clicked");
+			$(document).on('click', '#ci_btn', function (event) {
+				//alert("ci_btn clicked");
 				$('#c_row').children('div').toggle();
+				//$('.card').fadeOut();
+
 				$.post(
-					$(this).attr("action"),
+					"{{ url_for('monitor.cam_image') }}",
 					{},
 					function(data, status) {
 						//alert("Status: " + status + "\nData: " + data);
-						//console.log(data);
-						var imgpath = {{ url_for('static', filename='') }};
-						imgpath = imgpath + data.img;
-						ts = moment(data.timestamp, "YYYYMMDD_HHmmss");
-						//var ts = Date(data.timestamp);
-						//console.log(ts.format("ddd, MMM D, h:mm:ss a"));
+						//$('.card').fadeIn();
+						var imgstats = setTS(data.imgstats);
+						setStats(imgstats);
+						var imgpath = "{{ url_for('static', filename='') }}" + imgstats['filepath'];
+						
 						$('#c_row').children('div').toggle();
 						$('#c_vwr').fadeOut();
 						$('#c_vwr').empty();
 						$('#c_vwr').append('<img></img>');
 						$('#c_vwr').children('img').attr({"src" : imgpath, "class" : "img-fluid rounded", "id" : "c_img"});
-						$('#c_sbtn').show()
-						$('#c_vbtn').show()
+						$('#c_sbtn_0').show();
+						$('#c_sbtn_1').hide();
+						$('#c_vbtn').show();
 						$('#c_vwr').fadeIn();
-						$('#c_spn').html(ts.format("ddd, MMM D, h:mm:ss a"));
 					},
 					'json',
-				)
+				);
 			});
 			
+			// TAKE VIDEO
+			$(document).on('click', '#cv_btn', function (event) {
+				//alert("cv_btn clicked");
+				$('#c_row').children('div').toggle();
+				$.post(
+					"{{ url_for('monitor.cam_video') }}",
+					{},
+					function(data, status) {
+						console.log("Status:", status, "\nData:", data);
+						var imgstats = setTS(data.imgstats);
+						showLatestVideo(imgstats);
+						// setStats(imgstats);
+						// var imgpath = "{{ url_for('static', filename='') }}" + imgstats['filepath'];
+						$('#c_row').children('div').toggle();
+						// $('#c_vwr').fadeOut();
+						// $('#c_vwr').empty();
+						// $('#c_vwr').append('<img></img>');
+						// $('#c_vwr').children('img').attr({"src" : imgpath, "class" : "img-fluid rounded", "id" : "c_img"});
+						// $('#c_sbtn_0').show();
+						// $('#c_sbtn_1').hide();
+						// $('#c_vbtn').show();
+						// $('#c_vwr').fadeIn();
+						// $('#c_date').html(ts.format("ddd, MMM D, h:mm:ss a"));
+					},
+					'json',
+				);
+			});
+
 			// SHOW STREAM
-			$(document).on('click', '#c_sbtn', function (event) {
+			$(document).on('click', '#c_sbtn_0', function (event) {
 				$('#c_row').children('div').toggle();
 				$('#c_vwr').empty();
-				
 				$('#c_vwr').append('<img></img>');
-				$('#c_vwr').children('img').attr({"src" : "{{ url_for('monitor.stream') }}", "class" : "img-fluid rounded", "id" : "c_img"});
+				$('#c_vwr').children('img').attr({"src" : "{{ url_for('monitor.cam_stream') }}", "class" : "img-fluid rounded", "id" : "c_img"});
 				ts = moment().format("ddd, MMM D, h:mm:ss");
-				$('#c_spn').html(ts);
-				$('#c_sbtn').hide()
-				$('#c_vbtn').show()
+				// $('#c_date').html(ts);
+				$('button:button[id^="c_sbtn"]').toggle();
+				$('#c_vbtn').show();
 				$('#c_vwr').fadeIn();
 				$('#c_row').children('div').toggle();
 				
 				
 			});
 			
-			// SHOW VIDEO
-			$(document).on('click', '#c_vbtn', function (event) {
+			// STOP STREAM
+			$(document).on('click', '#c_sbtn_1', function (event) {
+				$('#c_row').children('div').toggle();
 				$.post(
 					"{{ url_for('monitor.cam_utils', op='kill') }}",
 					{},
@@ -149,23 +177,104 @@
 					},
 					'json',
 				);
-				$('#c_row').children('.col-3').toggle();
-				var txt1 = $("<div></div>").attr({"class" : "embed-responsive embed-responsive-4by3", "type": "video/mp4"});
-				var txt2 = $("<video></video>").attr({"class" : "embed-responsive-item", "src" : "{{ url_for('static', filename='videos/test.mp4') }}", "controls" : ""});
+				$('#c_vwr').fadeOut('fast');
 				$('#c_vwr').empty();
-				$('#c_vwr').append($("<div></div>").append(txt1));
-				$('.embed-responsive').append(txt2);
-				$('#c_vbtn').hide()
-				$('#c_sbtn').show()
+				$('#c_vwr').append('<img></img>');
+				$('#c_vwr').children('img').attr({"src" : {{ url_for('static', filename='') }} + image, "class" : "img-fluid rounded", "id" : "c_img"});
+				//$('#c_date').html(ts);
+				//$('#c_sbtn').hide()
+				//'input:radio[id^="r_opt_"]'
+				$('button:button[id^="c_sbtn"]').toggle();
+				$('#c_vbtn').show();
 				$('#c_vwr').fadeIn();
-				$('#c_row').children('.col-3').toggle();
+				$('#c_row').children('div').toggle();
 				
 				
 			});
 			
+			// SHOW LATEST VIDEO BUTTON CLICK
+			$(document).on('click', '#c_vbtn', function (event) {
+				$.post(
+					"{{ url_for('monitor.cam_utils', op='kill') }}",
+					{},
+					function(data, status) {
+						console.log("Status: " + status + "\nData: " + data);
+					},
+					'json',
+				);
+				$.post(
+					"{{ url_for('monitor.cam_video_latest') }}",
+					{},
+					function(data, status) {
+						var imgstats = setTS(data.imgstats);
+						// console.log("Status: " + status + "\nimgstats: " + imgstats);
+						showLatestVideo(imgstats);
+					},
+					'json',
+				);
+				
+				
+			});
 			
+			// CAMERA OPTIONS - ISO
+			$(document).on('change', 'input:radio[id^="iso_opt_"]', function (event) {
+				$.post(
+					"{{ url_for('monitor.cam_utils', op='iso') }}",
+					{'iso' : $(this).val()},
+				);
+			});
+			
+			// CAMERA OPTIONS - Resolution
+			$(document).on('click', '#reso_button', function (event) {
+				var resolution = {w : $('#reso_w_txt').val(), h : $('#reso_h_txt').val()};
+				$.post(
+					"{{ url_for('monitor.cam_utils', op='resolution') }}",
+					{'resolution' : resolution},
+				);
+			});
 			
 		});
+
+		// SET THE TS TO A STRING
+		function setTS(imgstats) {
+			var ts = new moment();
+			if (imgstats['ts'] == null) {
+				//ts = moment(imgstats['timestamp'], "YYYY-MM-DD HH:mm:ss");
+				ts = moment(imgstats['timestamp']);
+			} else {
+				ts = moment(imgstats['ts'], "YYYYMMDD_HHmmss")
+			};
+			imgstats['ts'] = ts.format("ddd, MMM D, h:mm:ss a");
+			return imgstats;
+		}
+
+		// SET IMAGE STATS
+		function setStats(imgstats) {
+			$('.card').fadeOut();
+			$.each(imgstats, function (i, item) {
+				var $td = $('td#' + i).text(item);				
+			});
+			$('#c_date').html(imgstats['ts']);
+			$('.card').fadeIn();
+		}
+
+		// SHOW LATEST VIDEO
+		function showLatestVideo (imgstats) {
+			$('#c_row').children('.col-3').toggle();
+			setStats(imgstats)
+			var imgpath = "{{ url_for('static', filename='') }}" + imgstats['filepath'];
+			var txt1 = $("<div></div>").attr({"class" : "embed-responsive embed-responsive-4by3", "type": "video/mp4"});
+			var txt2 = $("<video></video>").attr({"class" : "embed-responsive-item", "src" : imgpath, "controls" : ""});
+			$('#c_vwr').empty();
+			$('#c_vwr').append($("<div></div>").append(txt1));
+			$('.embed-responsive').append(txt2);
+			$('#c_vbtn').hide();
+			$('#c_sbtn_0').show();
+			$('#c_sbtn_1').hide();
+			$('#c_vwr').fadeIn();
+			$('#c_row').children('.col-3').toggle();
+		}
+
 	</script>
 	
 {% endblock %}
@@ -176,15 +285,11 @@
 </div>
 {% endblock %}
 
-{% block navcol %}
+{% block navlink %}
 	{% if g.user %}
-		<div class="container">
-			<div class="row">
-				<div class="col">
-					<p><b>BAWK BAWK</b></p>
-				</div>
-			</div>
-		</div>
+		<li class="nav-item">
+			<p class="nav-link"><b>BAWK BAWK!</b></p>
+		</li>
 	{% endif %}
 {% endblock %}
 
@@ -211,40 +316,35 @@
 				<div class="col-3 bg-info text-white">
 					Poll freq (s): {{ pollfreq }}
 				</div>
-				
 				<div class="col-4 bg-info text-white" id="curr">
-					<!-- <label id="currspin"> -->
-						<!-- <img src="{{ url_for('static', filename='spinner-rosetta-gray-24x24.gif') }}" class="mx-auto d-block"/> Polling... -->
-						<label id="currspin">
-							<i class="fas fa-spinner fa-pulse"></i> Polling...
-						</label>
-					<!-- </label> -->
+					<label id="currspin">
+						<i class="fas fa-spinner fa-pulse"></i> Polling...
+					</label>
 					<span id="currtext"></span>
 					<span id="currtemp"></span><br>
 					<span id="currdate"></span>
 				</div>
-				
 				<div class="col-1">
 				</div>
 			</div>
 			<br>
 			<div class="row justify-content-center">
-				<form action="{{ url_for('monitor.index') }}" method="post" id="form_range">
-				<div id="tr_opt" class="btn-group btn-group-toggle" data-toggle="buttons">
-					<label class="btn btn-info active" id="l_opt_1">
-						<input type="radio" name="options" id="r_opt_1" value="600" autocomplete="off" checked=""> 10m
+				<form method="post">
+				<div class="btn-group btn-group-toggle" data-toggle="buttons">
+					<label class="btn btn-info">
+						<input type="radio" name="options" id="r_opt_1" value="600" checked=""> 10m
 					</label>
-					<label class="btn btn-info" id="l_opt_2">
-						<input type="radio" name="options" id="r_opt_2" value="1800" autocomplete="off"> 30m
+					<label class="btn btn-info">
+						<input type="radio" name="options" id="r_opt_2" value="1800"> 30m
 					</label>
-					<label class="btn btn-info" id="l_opt_3">
-						<input type="radio" name="options" id="r_opt_3" value="3600" autocomplete="off"> 1h
+					<label class="btn btn-info active">
+						<input type="radio" name="options" id="r_opt_3" value="3600"> 1h
 					</label>
-					<label class="btn btn-info" id="l_opt_4">
-						<input type="radio" name="options" id="r_opt_4" value="86400" autocomplete="off"> 1d
+					<label class="btn btn-info">
+						<input type="radio" name="options" id="r_opt_4" value="86400"> 1d
 					</label>
-					<label class="btn btn-info" id="l_opt_5">
-						<input type="radio" name="options" id="r_opt_5" value="604800" autocomplete="off"> 7d
+					<label class="btn btn-info">
+						<input type="radio" name="options" id="r_opt_5" value="604800"> 7d
 					</label>
 				</div>
 				</form>
@@ -254,33 +354,158 @@
 			<div class="row justify-content-center" id="r_div"></div>
 			<br>
 			
-			<div class="row-fluid">
+			<!-- <div class="row-fluid"> -->
+			<div class="row">
 				<div class="col" id="p_d_div">
 					{{ plot_div | safe }}
 				</div>
+				
 			</div>
 			<br>
-			<div class="row justify-content-center">
+			<!-- <div class="row justify-content-center"> -->
 				
-				<!-- <form action="javascript:alert( 'Bawk!' );" method="post" id="form_range"> -->
-				<br>
-			</div>
+				<!-- <form action="javascript:alert( 'Bawk!' );" method="post"> -->
+				<!-- <form action="{{ url_for('monitor.cam_utils', op='iso') }}" method="post" id="form_post"> -->
+					<!-- <input type="submit" name="iso" value="400"> ISO -->
+				<!-- </form> -->
+				<!-- <br> -->
+			<!-- </div> -->
 			
 			<!-- CAMERA VIEWER -->
 			<div id="cv_div">
-				<div class="row" id="c_row">
-					<div class="col">
-						<button type="button" class="btn btn-info" id="c_btn" action="{{ url_for('monitor.cam_image') }}"><i class="fas fa-camera-retro"></i> Take Image </button>
-						<button type="button" class="btn btn-info" id="c_sbtn"><i class="fas fa-video"></i> Show Stream </button>
+				<div class="row align-items-center" id="c_row">
+					<div class="col-auto">
+						<button type="button" class="btn btn-info" id="ci_btn"><i class="fas fa-camera-retro"></i> Take Image </button>
+						<button type="button" class="btn btn-info" id="cv_btn"><i class="fas fa-video"></i> Take Video </button>
+					</div>
+					<div class="col-auto">
+						<button type="button" class="btn btn-info" id="c_sbtn_0"><i class="fas fa-video"></i> Show Stream </button>
+						<button type="button" class="btn btn-info" id="c_sbtn_1" style="display: none;"><i class="fas fa-ban" style="color:red;"></i> Stop Stream </button>
+					</div>
+					<div class="col-auto">
 						<button type="button" class="btn btn-info" id="c_vbtn"><i class="fas fa-video"></i> Show Video </button>
 					</div>
 					<div class="col-3" style="display: none;">
 						<button type="button" class="btn btn-info"><i class="fas fa-spinner fa-pulse"></i> Processing... </button>
 					</div>
 				</div>
+				<br>
+				<div class="row">
+					<div class="col-auto">
+						<button type="button" class="badge badge-secondary" id="c_opt_btn" data-toggle="collapse" data-target="#c_opt_coll" aria-expanded="false" aria-controls="c_opt_coll"><i class="fas fa-cogs"></i> Configure Camera </button>
+					</div>
+					<div class="col-auto text-primary">
+						<h6 id="c_date" style="margin-top: 0.3rem"></h6>
+					</div>
+				</div>
+				
+				<!-- CAMERA CONFIGURATION AND STATS -->
+				<div class="row">
+					<div class="col-auto">
+						<!-- COLLAPSED CARD -->
+						<div class="collapse" id="c_opt_coll">
+							<!-- CARD HEADER -->
+							<div class="card-header">
+								<ul class="nav nav-tabs" id="myTab" role="tablist">
+									<li class="nav-item">
+										<a class="nav-link active" id="imgstats_tab" data-toggle="tab" href="#imgstats_pane" role="tab" aria-controls="imgstats" aria-selected="true"><p style="font-size: .8rem; margin-bottom: 0">Stats</p></a>
+									</li>
+									<li class="nav-item">
+										<a class="nav-link" id="iso_tab" data-toggle="tab" href="#iso_pane" role="tab" aria-controls="iso" aria-selected="false"><p style="font-size: .8rem; margin-bottom: 0">ISO</p></a>
+									</li>
+									<li class="nav-item">
+										<a class="nav-link" id="reso_tab" data-toggle="tab" href="#reso_pane" role="tab" aria-controls="resolution" aria-selected="false"><p style="font-size: .8rem; margin-bottom: 0">Resolution</p></a>
+									</li>
+								</ul>
+							</div>
+							<!-- CARD BODY -->
+							<div class="card card-body">
+								<div class="tab-content" id="myTabContent">
+									<div class="tab-pane fade show active" id="imgstats_pane" role="tabpanel" aria-labelledby="imgstats_tab">
+										<table class="table table-bordered table-sm">
+											<thead>
+												
+											</thead>
+											<tbody>
+												<tr>
+													<th scope="row">Filename</th>
+														<td id="filename"></td>
+												</tr>
+												<tr>
+													<th scope="row">Type</th>
+														<td id="content_type"></td>
+												</tr>
+												<tr>
+													<th scope="row">ISO</th>
+														<td id="iso"></td>
+												</tr>
+												<tr>
+													<th scope="row">Resolution</th>
+														<td id="resolution"></td>
+												</tr>
+												<tr>
+													<th scope="row">Framerate</th>
+														<td id="framerate"></td>
+												</tr>
+												<tr>
+													<th scope="row">Framerate Range</th>
+														<td id="framerate_range"></td>
+												</tr>
+												<tr>
+													<th scope="row">Sensor Mode</th>
+														<td id="sensor_mode"></td>
+												</tr>
+											</tbody>
+										</table>
+
+									</div>
+									<div class="tab-pane fade show" id="iso_pane" role="tabpanel" aria-labelledby="iso_tab">
+										<form method="post">
+											<div class="btn-group btn-group-toggle" data-toggle="buttons">
+												<label class="btn btn-info btn-sm active">
+													<input type="radio" name="options" id="iso_opt_1" value="0" checked=""> auto
+												</label>
+												<label class="btn btn-info btn-sm">
+													<input type="radio" name="options" id="iso_opt_2" value="100"> 100
+												</label>
+												<label class="btn btn-info btn-sm">
+													<input type="radio" name="options" id="iso_opt_3" value="200"> 200
+												</label>
+												<label class="btn btn-info btn-sm">
+													<input type="radio" name="options" id="iso_opt_4" value="400"> 400
+												</label>
+												<label class="btn btn-info btn-sm">
+													<input type="radio" name="options" id="iso_opt_5" value="800"> 800
+												</label>
+												<label class="btn btn-info btn-sm">
+													<input type="radio" name="options" id="iso_opt_6" value="1600"> 1600
+												</label>
+											</div>
+										</form>
+									</div>
+									<div class="tab-pane fade" id="reso_pane" role="tabpanel" aria-labelledby="reso_tab">
+										<form method="post">
+											<div class="form-row">
+												<div class="col-auto">
+													<input type="text" class="form-control form-control-sm" id="reso_w_txt" placeholder="Width (pixels)" value="3280">
+												</div>
+												<div class="col-auto">
+													<input type="text" class="form-control form-control-sm" id="reso_h_txt" placeholder="Height (pixels)" value="2464">
+												</div>
+												<div class="col-auto">
+													<button type="button" class="btn btn-info btn-sm" id="reso_button"><i class="far fa-check-square"></i></button>
+												</div>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- IMAGE -->
 				<div class="row justify-content-center">
 					<div class="col">
-						<span id="c_spn"></span>
 						<br>
 						<div id="c_vwr"></div>
 					</div>
